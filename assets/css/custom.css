@@ -1,0 +1,387 @@
+/* TUP Custom Colors */
+:root {
+    --tup-primary: #C41E3A; /* Cardinal Red */
+    --tup-secondary: #333333;
+    --tup-accent: #FFD700;
+    --tup-red: #8B0000;
+    --tup-red-dark: #6B0000;
+    --tup-red-light: rgba(139, 0, 0, 0.1);
+    --tup-yellow: #FFD700;
+    --tup-yellow-light: rgba(255, 215, 0, 0.1);
+    --tup-white: #ffffff;
+}
+
+/* Layout Structure */
+#wrapper {
+    display: flex;
+    width: 100%;
+    min-height: 100vh;
+    position: relative;
+}
+
+#content-wrapper {
+    width: 100%;
+    overflow-x: hidden;
+    background-color: #fff;
+    position: relative;
+    min-height: 100vh;
+    transition: all 0.3s ease;
+    margin-left: 250px;
+}
+
+#content-wrapper.toggled {
+    margin-left: 6.5rem;
+}
+
+#content {
+    flex: 1 0 auto;
+    padding: 1.5rem;
+    margin-top: 4.375rem;
+}
+
+/* Sidebar */
+.sidebar {
+    background-color: #fff !important;
+    position: fixed !important;
+    z-index: 1000 !important;
+    min-height: 100vh !important;
+    width: 250px !important;
+    transition: all 0.3s ease !important;
+    top: 0;
+    left: 0;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+}
+
+.sidebar.toggled {
+    width: 6.5rem !important;
+}
+
+/* Navbar */
+.navbar {
+    background-color: #fff !important;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 250px;
+    z-index: 999;
+    height: 4.375rem;
+    transition: all 0.3s ease;
+}
+
+.navbar.toggled {
+    left: 6.5rem;
+}
+
+.navbar-brand {
+    color: var(--tup-primary) !important;
+    font-weight: 600 !important;
+}
+
+/* Main Content Area */
+.content-wrapper {
+    background-color: #fff !important;
+    margin-left: 250px;
+    transition: all 0.3s ease;
+}
+
+.content-wrapper.toggled {
+    margin-left: 6.5rem;
+}
+
+/* Card Styling */
+.card {
+    background-color: #fff !important;
+    border: 1px solid rgba(0, 0, 0, 0.125) !important;
+    margin-bottom: 1.5rem;
+}
+
+.card-header {
+    background-color: var(--tup-primary) !important;
+    color: #fff !important;
+    border-bottom: 1px solid var(--tup-red-dark) !important;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 6.5rem !important;
+    }
+
+    .sidebar.toggled {
+        width: 0 !important;
+    }
+
+    .navbar {
+        left: 6.5rem;
+    }
+
+    .navbar.toggled {
+        left: 0;
+    }
+
+    #content-wrapper {
+        margin-left: 6.5rem;
+    }
+
+    #content-wrapper.toggled {
+        margin-left: 0;
+    }
+
+    #content {
+        padding: 1rem;
+    }
+}
+
+/* Container Fluid */
+.container-fluid {
+    padding: 0 1.5rem;
+    width: 100%;
+    margin-right: auto;
+    margin-left: auto;
+}
+
+/* Row and Column Adjustments */
+.row {
+    margin-right: -0.75rem;
+    margin-left: -0.75rem;
+}
+
+.col, .col-1, .col-10, .col-11, .col-12, .col-2, .col-3, .col-4, .col-5, .col-6, .col-7, .col-8, .col-9, .col-auto, .col-lg, .col-lg-1, .col-lg-10, .col-lg-11, .col-lg-12, .col-lg-2, .col-lg-3, .col-lg-4, .col-lg-5, .col-lg-6, .col-lg-7, .col-lg-8, .col-lg-9, .col-lg-auto, .col-md, .col-md-1, .col-md-10, .col-md-11, .col-md-12, .col-md-2, .col-md-3, .col-md-4, .col-md-5, .col-md-6, .col-md-7, .col-md-8, .col-md-9, .col-md-auto, .col-sm, .col-sm-1, .col-sm-10, .col-sm-11, .col-sm-12, .col-sm-2, .col-sm-3, .col-sm-4, .col-sm-5, .col-sm-6, .col-sm-7, .col-sm-8, .col-sm-9, .col-sm-auto, .col-xl, .col-xl-1, .col-xl-10, .col-xl-11, .col-xl-12, .col-xl-2, .col-xl-3, .col-xl-4, .col-xl-5, .col-xl-6, .col-xl-7, .col-xl-8, .col-xl-9, .col-xl-auto {
+    padding-right: 0.75rem;
+    padding-left: 0.75rem;
+}
+
+/* Button styles */
+.btn-primary {
+    background-color: var(--tup-primary) !important;
+    border-color: var(--tup-primary) !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--tup-red-dark) !important;
+    border-color: var(--tup-red-dark) !important;
+}
+
+.btn-warning {
+    background-color: var(--tup-accent) !important;
+    border-color: var(--tup-accent) !important;
+    color: var(--tup-secondary) !important;
+}
+
+.btn-warning:hover {
+    background-color: #E6AC00 !important;
+    border-color: #E6AC00 !important;
+}
+
+/* Text colors */
+.text-primary {
+    color: var(--tup-white) !important;
+}
+
+.text-secondary {
+    color: var(--tup-secondary) !important;
+}
+
+.text-accent {
+    color: var(--tup-accent) !important;
+}
+
+/* Border colors */
+.border-left-primary {
+    border-left: 0.25rem solid var(--tup-primary) !important;
+}
+
+.border-left-secondary {
+    border-left: 0.25rem solid var(--tup-secondary) !important;
+}
+
+.border-left-accent {
+    border-left: 0.25rem solid var(--tup-accent) !important;
+}
+
+/* Table header styling */
+.table thead th {
+    background-color: var(--tup-primary) !important;
+    color: white !important;
+    border-bottom: 2px solid var(--tup-red-dark) !important;
+}
+
+/* Badge styles */
+.badge-primary {
+    background-color: var(--tup-primary) !important;
+}
+
+.badge-warning {
+    background-color: var(--tup-accent) !important;
+    color: var(--tup-secondary) !important;
+}
+
+/* Pagination */
+.page-item.active .page-link {
+    background-color: var(--tup-primary) !important;
+    border-color: var(--tup-primary) !important;
+}
+
+.page-link {
+    color: var(--tup-primary) !important;
+}
+
+/* DataTables Customization */
+.dataTables_wrapper .dataTables_filter input {
+    border-color: var(--tup-primary) !important;
+}
+
+.dataTables_wrapper .dataTables_length select {
+    border-color: var(--tup-primary) !important;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--tup-primary);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--tup-red-dark);
+}
+
+/* Form Controls */
+.form-control:focus {
+    border-color: var(--tup-primary) !important;
+    box-shadow: 0 0 0 0.2rem rgba(139, 0, 0, 0.25) !important;
+}
+
+/* Alert Styling */
+.alert-primary {
+    background-color: var(--tup-red-light) !important;
+    border-color: var(--tup-primary) !important;
+    color: var(--tup-primary) !important;
+}
+
+/* Progress Bar */
+.progress-bar {
+    background-color: var(--tup-primary) !important;
+}
+
+/* Modal Header */
+.modal-header {
+    background-color: var(--tup-primary) !important;
+    color: #fff !important;
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+    background-color: #fff !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+}
+
+.dropdown-item {
+    color: var(--tup-secondary) !important;
+}
+
+.dropdown-item:hover {
+    background-color: var(--tup-red-light) !important;
+    color: var(--tup-primary) !important;
+}
+
+/* Navigation Links */
+.sidebar .nav-item .nav-link {
+    color: var(--tup-secondary) !important;
+    transition: all 0.3s ease !important;
+    padding: 1rem 1.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.sidebar .nav-item .nav-link:hover {
+    color: var(--tup-primary) !important;
+    background-color: var(--tup-red-light) !important;
+}
+
+.sidebar .nav-item.active .nav-link {
+    color: var(--tup-primary) !important;
+    background-color: var(--tup-red-light) !important;
+}
+
+.sidebar .nav-item .nav-link i {
+    color: var(--tup-secondary) !important;
+    margin-right: 0.5rem;
+}
+
+.sidebar .nav-item:hover .nav-link i,
+.sidebar .nav-item.active .nav-link i {
+    color: var(--tup-primary) !important;
+}
+
+/* Topbar */
+.topbar {
+    background-color: #fff !important;
+    height: 4.375rem !important;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+}
+
+.topbar .dropdown-list {
+    background-color: #fff !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Sidebar Brand */
+.sidebar-brand {
+    background-color: #fff !important;
+    padding: 1.5rem 1.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-brand-text {
+    color: var(--tup-primary) !important;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* Sidebar Divider */
+.sidebar-divider {
+    border-top: 1px solid rgba(0, 0, 0, 0.1) !important;
+    margin: 0 1.5rem;
+    height: 1px;
+}
+
+/* Sidebar Heading */
+.sidebar-heading {
+    color: var(--tup-secondary) !important;
+    font-weight: bold;
+    padding: 0 1.5rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    margin-top: 1rem;
+}
+
+/* Navbar Links */
+.navbar .nav-link {
+    color: var(--tup-secondary) !important;
+    transition: all 0.3s ease !important;
+}
+
+.navbar .nav-link:hover {
+    color: var(--tup-primary) !important;
+}
+
+/* Active State Border */
+.sidebar .nav-item.active .nav-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background-color: var(--tup-primary);
+} 

@@ -1,0 +1,183 @@
+/* TUP Custom Colors */
+:root {
+    --tup-red: #8B0000;
+    --tup-red-dark: #6B0000;
+    --tup-red-light: rgba(139, 0, 0, 0.1);
+}
+
+/* Sidebar */
+.sidebar {
+    background-color: var(--tup-red) !important;
+    position: fixed !important;
+    z-index: 1000 !important;
+    min-height: 100vh !important;
+    width: 250px !important;
+    transition: all 0.3s ease !important;
+}
+
+.sidebar.toggled {
+    width: 6.5rem !important;
+}
+
+/* Navbar */
+.navbar {
+    background-color: var(--tup-red) !important;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+}
+
+.navbar-brand {
+    color: #fff !important;
+    font-weight: 600 !important;
+}
+
+.navbar .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    transition: all 0.3s ease !important;
+}
+
+.navbar .nav-link:hover {
+    color: #fff !important;
+}
+
+/* Topbar */
+.topbar {
+    background-color: var(--tup-red) !important;
+    height: 4.375rem !important;
+    box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+}
+
+.topbar .dropdown-list {
+    background-color: #fff !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Card Header */
+.card-header {
+    background-color: var(--tup-red) !important;
+    color: #fff !important;
+    border-bottom: 1px solid var(--tup-red-dark) !important;
+}
+
+/* Buttons */
+.btn-primary {
+    background-color: var(--tup-red) !important;
+    border-color: var(--tup-red) !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--tup-red-dark) !important;
+    border-color: var(--tup-red-dark) !important;
+}
+
+/* Navigation Links */
+.sidebar .nav-item .nav-link {
+    color: rgba(255, 255, 255, 0.8) !important;
+    transition: all 0.3s ease !important;
+    padding: 1rem 1.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.sidebar .nav-item .nav-link:hover {
+    color: #fff !important;
+    background-color: var(--tup-red-light) !important;
+}
+
+.sidebar .nav-item.active .nav-link {
+    color: #fff !important;
+    background-color: var(--tup-red-light) !important;
+    font-weight: 600 !important;
+}
+
+/* Sidebar Brand */
+.sidebar-brand {
+    background-color: var(--tup-red-dark) !important;
+    padding: 1.5rem 1rem !important;
+}
+
+.sidebar-brand-text {
+    font-weight: 600 !important;
+    letter-spacing: 0.5px !important;
+    color: #fff !important;
+}
+
+/* Sidebar Divider */
+.sidebar-divider {
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    margin: 1rem 0;
+}
+
+/* Sidebar Heading */
+.sidebar-heading {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 0 1rem;
+    margin-top: 1rem;
+}
+
+/* Sidebar Toggle Button */
+#sidebarToggle {
+    background-color: var(--tup-red-light) !important;
+    width: 2.5rem !important;
+    height: 2.5rem !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: none !important;
+    border-radius: 50% !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+    z-index: 1 !important;
+    margin: 1rem auto !important;
+    cursor: pointer !important;
+}
+
+#sidebarToggle:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+#sidebarToggle i {
+    color: #fff !important;
+    transition: transform 0.3s ease !important;
+    font-size: 1rem !important;
+}
+
+.toggled #sidebarToggle i {
+    transform: rotate(180deg) !important;
+}
+
+/* Ensure toggle button container is visible */
+.text-center.d-none.d-md-inline {
+    display: flex !important;
+    justify-content: center !important;
+    padding: 1rem 0 !important;
+    width: 100% !important;
+}
+
+/* Sidebar Responsive Behavior */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 0 !important;
+        overflow: hidden;
+    }
+    
+    .sidebar.toggled {
+        width: 6.5rem !important;
+    }
+}
+
+/* Ensure all important styles are maintained */
+.bg-tup {
+    background-color: var(--tup-red) !important;
+}
+
+.text-tup {
+    color: var(--tup-red) !important;
+}
+
+.border-tup {
+    border-color: var(--tup-red) !important;
+} 

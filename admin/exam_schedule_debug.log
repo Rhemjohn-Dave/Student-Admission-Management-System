@@ -1,0 +1,440 @@
+2025-05-20 19:01:24 - Script started
+2025-05-20 19:01:24 - POST request received
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 01:01
+    [venue] => ad
+    [max_participants] => 12
+)
+
+2025-05-20 19:01:24 - Processing add_schedule
+Data received - Date: 2025-05-21, Time: 01:01, Venue: ad, Max Participants: 12
+2025-05-20 19:01:24 - New exam schedule created with ID: 26
+2025-05-20 19:01:24 - Error: Error preparing log statement: 
+2025-05-20 19:01:24 - Script ended
+2025-05-20 19:01:54 - Script started
+2025-05-20 19:01:54 - POST request received
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 01:01
+    [venue] => dasd
+    [max_participants] => 123
+)
+
+2025-05-20 19:01:54 - Processing add_schedule
+Data received - Date: 2025-05-21, Time: 01:01, Venue: dasd, Max Participants: 123
+2025-05-20 19:01:54 - New exam schedule created with ID: 27
+2025-05-20 19:01:54 - Error: Error preparing log statement: 
+2025-05-20 19:01:54 - Script ended
+2025-05-20 19:03:10 - Script started
+2025-05-20 19:03:10 - POST request received
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 01:03
+    [venue] => das
+    [max_participants] => 12
+)
+
+2025-05-20 19:03:10 - Processing add_schedule
+Data received - Date: 2025-05-21, Time: 01:03, Venue: das, Max Participants: 12
+2025-05-20 19:03:10 - New exam schedule created with ID: 28
+2025-05-20 19:03:10 - Error: Error preparing log statement: 
+2025-05-20 19:03:10 - Script ended
+2025-05-20 19:04:08 - Script started
+2025-05-20 19:04:08 - POST request received
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 01:04
+    [venue] => ad
+    [max_participants] => 123
+)
+
+2025-05-20 19:04:08 - Processing add_schedule
+Data received - Date: 2025-05-21, Time: 01:04, Venue: ad, Max Participants: 123
+2025-05-20 19:04:08 - New exam schedule created with ID: 30
+2025-05-20 19:04:08 - Error: Error preparing log statement: 
+2025-05-20 19:04:08 - Script ended
+2025-05-20 19:05:19 - Script started
+2025-05-20 19:05:19 - POST request received
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-20
+    [time] => 01:05
+    [venue] => da
+    [max_participants] => 12
+)
+
+2025-05-20 19:05:19 - Processing add_schedule
+Data received - Date: 2025-05-20, Time: 01:05, Venue: da, Max Participants: 12
+2025-05-20 19:05:19 - New exam schedule created with ID: 32
+2025-05-20 19:05:19 - Error: Error preparing log statement: 
+2025-05-20 19:05:19 - Script ended
+
+
+2025-05-20 19:07:13 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 01:07
+    [venue] => da
+    [max_participants] => 22
+)
+
+Processing POST request
+Action: add_schedule
+Received data:
+Date: 2025-05-21
+Time: 01:07
+Venue: da
+Max Participants: 22
+Transaction started
+New exam schedule created with ID: 33
+Error occurred: Error preparing log statement: 
+2025-05-20 19:07:13 - Request completed
+
+
+2025-05-20 19:08:34 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 01:08
+    [venue] => dasdasdasd
+    [max_participants] => 123
+)
+
+Processing POST request
+Action: add_schedule
+Received data:
+Date: 2025-05-21
+Time: 01:08
+Venue: dasdasdasd
+Max Participants: 123
+Transaction started
+New exam schedule created with ID: 34
+Error occurred: Error preparing log statement: 
+2025-05-20 19:08:34 - Request completed
+
+
+2025-05-20 19:09:46 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 01:09
+    [venue] => ad
+    [max_participants] => 123
+)
+
+Processing POST request
+Action: add_schedule
+Received data:
+Date: 2025-05-21
+Time: 01:09
+Venue: ad
+Max Participants: 123
+New exam schedule created with ID: 35
+Error occurred: Error preparing log statement: 
+2025-05-20 19:09:47 - Request completed
+
+
+2025-05-20 20:00:32 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 02:00
+    [venue] => ECE
+    [max_participants] => 20
+)
+
+Processing POST request
+Action: add_schedule
+Received data:
+Date: 2025-05-21
+Time: 02:00
+Venue: ECE
+Max Participants: 20
+Error occurred: Error creating exam schedule: Cannot add or update a child row: a foreign key constraint fails (`tup_admissions`.`exam_schedules`, CONSTRAINT `exam_schedules_ibfk_1` FOREIGN KEY (`program_id`) REFERENCES `programs` (`program_id`) ON DELETE CASCADE)
+2025-05-20 20:00:32 - Request completed
+
+
+2025-05-20 20:02:42 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 02:02
+    [venue] => asd
+    [max_participants] => 123
+)
+
+Processing POST request
+Action: add_schedule
+Received data:
+Date: 2025-05-21
+Time: 02:02
+Venue: asd
+Max Participants: 123
+Error occurred: Error creating exam schedule: Cannot add or update a child row: a foreign key constraint fails (`tup_admissions`.`exam_schedules`, CONSTRAINT `exam_schedules_ibfk_1` FOREIGN KEY (`program_id`) REFERENCES `programs` (`program_id`) ON DELETE CASCADE)
+2025-05-20 20:02:42 - Request completed
+
+
+2025-05-20 20:03:44 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 02:03
+    [venue] => dasd
+    [max_participants] => 123
+)
+
+Processing POST request
+Action: add_schedule
+Received data:
+Date: 2025-05-21
+Time: 02:03
+Venue: dasd
+Max Participants: 123
+Error occurred: Error creating exam schedule: Cannot add or update a child row: a foreign key constraint fails (`tup_admissions`.`exam_schedules`, CONSTRAINT `exam_schedules_ibfk_1` FOREIGN KEY (`program_id`) REFERENCES `programs` (`program_id`) ON DELETE CASCADE)
+2025-05-20 20:03:44 - Request completed
+
+
+2025-05-20 20:05:35 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 02:05
+    [venue] => ads
+    [max_participants] => 123
+)
+
+Validation failed - missing required fields
+
+
+2025-05-20 20:27:09 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 02:27
+    [venue] => das
+    [max_participants] => 10
+)
+
+Validation failed - missing required fields
+
+
+2025-05-20 20:30:25 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 02:30
+    [venue] => ECE
+    [max_participants] => 20
+)
+
+Validation failed - missing required fields
+
+
+2025-05-20 20:32:14 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 02:32
+    [venue] => ECE1
+    [max_participants] => 20
+)
+
+Received data:
+exam_date: 
+exam_time: 
+venue: ECE1
+max_participants: 20
+Validation failed - missing required fields
+
+
+2025-05-20 20:34:34 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-22
+    [time] => 02:34
+    [venue] => ECE2
+    [max_participants] => 20
+)
+
+Received data:
+exam_date: 
+exam_time: 
+venue: ECE2
+max_participants: 20
+Validation failed - missing required fields
+
+
+2025-05-20 20:35:39 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-22
+    [time] => 02:35
+    [venue] => dasd
+    [max_participants] => 20
+)
+
+Received data:
+exam_date: 
+exam_time: 
+venue: dasd
+max_participants: 20
+Validation failed - missing required fields
+
+
+2025-05-20 20:37:55 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 03:37
+    [venue] => ECE4
+    [max_participants] => 20
+)
+
+Received data:
+exam_date: 2025-05-21
+exam_time: 03:37
+venue: ECE4
+max_participants: 20
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Error occurred: Error preparing log statement: Unknown column 'details' in 'field list'
+2025-05-20 20:37:55 - Request completed
+
+
+2025-05-20 20:39:13 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 02:39
+    [venue] => ECE5
+    [max_participants] => 20
+)
+
+Received data:
+exam_date: 2025-05-21
+exam_time: 02:39
+venue: ECE5
+max_participants: 20
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 5
+2025-05-20 20:39:13 - Request completed
+
+
+2025-05-20 21:35:56 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-21
+    [time] => 03:35
+    [venue] => das
+    [max_participants] => 123
+)
+
+Received data:
+exam_date: 2025-05-21
+exam_time: 03:35
+venue: das
+max_participants: 123
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 3
+2025-05-20 21:35:57 - Request completed
+
+
+2025-05-23 02:59:14 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-23
+    [time] => 08:59
+    [venue] => ECE LAB
+    [max_participants] => 20
+)
+
+Received data:
+exam_date: 2025-05-23
+exam_time: 08:59
+venue: ECE LAB
+max_participants: 20
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 4
+2025-05-23 02:59:14 - Request completed
+
+
+2025-05-30 15:54:57 - New request started
+POST data: Array
+(
+    [student_id] => 2
+    [exam_date] => 2025-05-30
+    [exam_time] => 9:00 AM - 12:00 PM
+)
+
+Received data:
+exam_date: 
+exam_time: 
+venue: 
+max_participants: 
+Validation failed - missing required fields
+
+
+2025-05-30 15:56:53 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-05-30
+    [time] => 08:00
+    [venue] => TUP Visayas
+    [max_participants] => 20
+)
+
+Received data:
+exam_date: 2025-05-30
+exam_time: 08:00
+venue: TUP Visayas
+max_participants: 20
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 1
+2025-05-30 15:56:53 - Request completed
+
+
+2025-05-30 15:57:28 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-06-02
+    [time] => 08:00
+    [venue] => TUP Visayas
+    [max_participants] => 20
+)
+
+Received data:
+exam_date: 2025-06-02
+exam_time: 08:00
+venue: TUP Visayas
+max_participants: 20
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 2
+2025-05-30 15:57:28 - Request completed
