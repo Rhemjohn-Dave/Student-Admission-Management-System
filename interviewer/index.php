@@ -1,14 +1,12 @@
 <?php
 session_start();
 require_once '../includes/auth_check.php';
-require_once "../includes/header.php";
+
 // Check if user is interviewer
 if (!isset($_SESSION["user_type"]) || $_SESSION["user_type"] !== "interviewer") {
     header("Location: ../auth/login.php");
     exit();
 }
-
-require_once '../includes/auth_check.php';
 
 $page = isset($_GET['page']) ? $_GET['page'] : 'dashboard';
 $allowed_pages = ['dashboard', 'interview_schedules', 'interview_evaluation', 'interview_results', 'profile'];
@@ -18,22 +16,8 @@ if (!in_array($page, $allowed_pages)) {
 }
 
 $page_title = ucfirst(str_replace('_', ' ', $page)) . " - Student Admissions Management System";
-
-// Include the page content first to handle any redirects
-$page_file = $page . '.php';
-if (file_exists($page_file)) {
-    ob_start();
-    include $page_file;
-    $page_content = ob_get_clean();
-} else {
-    ob_start();
-    include 'dashboard.php';
-    $page_content = ob_get_clean();
-}
-
-// Now include the header and output the page
-require_once "../includes/header.php";
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -76,9 +60,17 @@ require_once "../includes/header.php";
 
                 <!-- Begin Page Content -->
                 <div class="container-fluid">
-                    <?php echo $page_content; ?>
+                    <?php
+                    // Include the page content
+                    $page_file = $page . '.php';
+                    if (file_exists($page_file)) {
+                        include $page_file;
+                    } else {
+                        include 'dashboard.php';
+                    }
+                    ?>
                 </div>
-                <!-- /.container-fluid -->
+                <!-- End of Page Content -->
             </div>
             <!-- End of Main Content -->
 
@@ -101,11 +93,30 @@ require_once "../includes/header.php";
 
     <!-- Page level plugins - Only include if needed -->
     <?php if (in_array($page, ['interview_schedules', 'interview_results', 'interview_evaluation'])): ?>
+    <!-- DataTables -->
     <script src="../assets/vendor/datatables/jquery.dataTables.min.js"></script>
     <script src="../assets/vendor/datatables/dataTables.bootstrap4.min.js"></script>
     <script>
         $(document).ready(function() {
-            $('#dataTable').DataTable();
+            // Initialize DataTables based on the current page
+            <?php if ($page === 'interview_schedules'): ?>
+                if ($('#dataTable').length) {
+                    $('#dataTable').DataTable({
+                        "order": [[2, "asc"], [3, "asc"]] // Sort by date and time
+                    });
+                }
+                if ($('#schedulesTable').length) {
+                    $('#schedulesTable').DataTable({
+                        "order": [[0, "asc"]] // Sort by date
+                    });
+                }
+            <?php elseif ($page === 'interview_results'): ?>
+                if ($('#dataTable').length) {
+                    $('#dataTable').DataTable({
+                        "order": [[2, "desc"]] // Sort by completion date
+                    });
+                }
+            <?php endif; ?>
         });
     </script>
     <?php endif; ?>

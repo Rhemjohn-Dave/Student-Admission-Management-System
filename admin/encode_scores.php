@@ -102,70 +102,134 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $scores = $_POST['scores'];
         $success_count = 0;
         $error_count = 0;
+        $error_details = array();
         
         foreach ($scores as $applicant_id => $score) {
-            if (!empty($score) && is_numeric($score) && $score >= 0 && $score <= 100) {
+            try {
+                // Skip empty scores
+                if (empty($score)) {
+                    continue;
+                }
+
+                // Validate score
+                if (!is_numeric($score) || $score < 0 || $score > 100) {
+                    throw new Exception("Invalid score value: $score");
+                }
+
                 // Get user_id from applicant_id
-                $user_query = "SELECT user_id FROM applicants WHERE applicant_id = ?";
+                $user_query = "SELECT user_id, first_name, last_name FROM applicants WHERE applicant_id = ?";
                 $user_stmt = $conn->prepare($user_query);
-                $user_stmt->bind_param("i", $applicant_id);
-                $user_stmt->execute();
-                $user_result = $user_stmt->get_result();
+                if (!$user_stmt) {
+                    throw new Exception("Error preparing user query: " . $conn->error);
+                }
                 
-                if ($user = $user_result->fetch_assoc()) {
-                    $user_id = $user['user_id'];
+                $user_stmt->bind_param("i", $applicant_id);
+                if (!$user_stmt->execute()) {
+                    throw new Exception("Error executing user query: " . $user_stmt->error);
+                }
+                
+                $user_result = $user_stmt->get_result();
+                if (!$user = $user_result->fetch_assoc()) {
+                    throw new Exception("Applicant not found");
+                }
+                
+                $user_id = $user['user_id'];
+                $applicant_name = $user['first_name'] . ' ' . $user['last_name'];
+                
+                // Get the current exam ID for this applicant
+                $exam_query = "SELECT es.exam_id 
+                             FROM exam_registrations reg 
+                             JOIN exam_schedules es ON reg.exam_schedule_id = es.exam_id 
+                             WHERE reg.applicant_id = ? AND es.status = 'completed' 
+                             ORDER BY es.exam_date DESC LIMIT 1";
+                $exam_stmt = $conn->prepare($exam_query);
+                if (!$exam_stmt) {
+                    throw new Exception("Error preparing exam query: " . $conn->error);
+                }
+                
+                $exam_stmt->bind_param("i", $applicant_id);
+                if (!$exam_stmt->execute()) {
+                    throw new Exception("Error executing exam query: " . $exam_stmt->error);
+                }
+                
+                $exam_result = $exam_stmt->get_result();
+                if (!$exam = $exam_result->fetch_assoc()) {
+                    throw new Exception("No completed exam found for this applicant");
+                }
+                
+                $current_exam_id = $exam['exam_id'];
+                
+                // Check if exam result already exists
+                $check_query = "SELECT result_id FROM exam_results WHERE user_id = ? AND exam_id = ?";
+                $check_stmt = $conn->prepare($check_query);
+                if (!$check_stmt) {
+                    throw new Exception("Error preparing check query: " . $conn->error);
+                }
+                
+                $check_stmt->bind_param("ii", $user_id, $current_exam_id);
+                if (!$check_stmt->execute()) {
+                    throw new Exception("Error executing check query: " . $check_stmt->error);
+                }
+                
+                $check_result = $check_stmt->get_result();
+                
+                if ($check_result->num_rows > 0) {
+                    // Update existing score
+                    $update_query = "UPDATE exam_results SET 
+                        score = ?, 
+                        status = CASE 
+                            WHEN ? >= 75 THEN 'passed' 
+                            ELSE 'failed' 
+                        END,
+                        updated_at = NOW() 
+                        WHERE user_id = ? AND exam_id = ?";
+                    $update_stmt = $conn->prepare($update_query);
+                    if (!$update_stmt) {
+                        throw new Exception("Error preparing update query: " . $conn->error);
+                    }
                     
-                    // Check if exam result already exists
-                    $check_query = "SELECT result_id FROM exam_results WHERE user_id = ?";
-                    $check_stmt = $conn->prepare($check_query);
-                    $check_stmt->bind_param("i", $user_id);
-                    $check_stmt->execute();
-                    $check_result = $check_stmt->get_result();
+                    $update_stmt->bind_param("ddii", $score, $score, $user_id, $current_exam_id);
+                    if (!$update_stmt->execute()) {
+                        throw new Exception("Error executing update query: " . $update_stmt->error);
+                    }
+                } else {
+                    // Insert new score
+                    $insert_query = "INSERT INTO exam_results (
+                        user_id, 
+                        exam_id,
+                        score, 
+                        status, 
+                        created_at, 
+                        updated_at
+                    ) VALUES (
+                        ?, 
+                        ?,
+                        ?, 
+                        CASE 
+                            WHEN ? >= 75 THEN 'passed' 
+                            ELSE 'failed' 
+                        END,
+                        NOW(), 
+                        NOW()
+                    )";
+                    $insert_stmt = $conn->prepare($insert_query);
+                    if (!$insert_stmt) {
+                        throw new Exception("Error preparing insert query: " . $conn->error);
+                    }
                     
-                    if ($check_result->num_rows > 0) {
-                        // Update existing score
-                        $update_query = "UPDATE exam_results SET 
-                            score = ?, 
-                            status = CASE 
-                                WHEN ? >= 75 THEN 'passed' 
-                                ELSE 'failed' 
-                            END,
-                            updated_at = NOW() 
-                            WHERE user_id = ?";
-                        $update_stmt = $conn->prepare($update_query);
-                        $update_stmt->bind_param("ddi", $score, $score, $user_id);
-                        if ($update_stmt->execute()) {
-                            $success_count++;
-                        } else {
-                            $error_count++;
-                        }
-                    } else {
-                        // Insert new score
-                        $insert_query = "INSERT INTO exam_results (
-                            user_id, 
-                            score, 
-                            status, 
-                            created_at, 
-                            updated_at
-                        ) VALUES (
-                            ?, 
-                            ?, 
-                            CASE 
-                                WHEN ? >= 75 THEN 'passed' 
-                                ELSE 'failed' 
-                            END,
-                            NOW(), 
-                            NOW()
-                        )";
-                        $insert_stmt = $conn->prepare($insert_query);
-                        $insert_stmt->bind_param("idd", $user_id, $score, $score);
-                        if ($insert_stmt->execute()) {
-                            $success_count++;
-                        } else {
-                            $error_count++;
-                        }
+                    $insert_stmt->bind_param("iidd", $user_id, $current_exam_id, $score, $score);
+                    if (!$insert_stmt->execute()) {
+                        throw new Exception("Error executing insert query: " . $insert_stmt->error);
                     }
                 }
+                
+                $success_count++;
+                
+            } catch (Exception $e) {
+                $error_count++;
+                $error_details[] = "Applicant ID $applicant_id" . 
+                    (isset($applicant_name) ? " ($applicant_name)" : "") . 
+                    ": " . $e->getMessage();
             }
         }
         
@@ -173,10 +237,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             // Recalculate rankings after batch update
             require_once "handlers/ranking_handler.php";
             recalculateRankings($conn);
-            echo '<div class="alert alert-success">Successfully updated ' . $success_count . ' scores.' . 
-                 ($error_count > 0 ? ' Failed to update ' . $error_count . ' scores.' : '') . '</div>';
+            
+            $message = '<div class="alert alert-success">Successfully updated ' . $success_count . ' scores.';
+            if ($error_count > 0) {
+                $message .= '<br>Failed to update ' . $error_count . ' scores:<br>';
+                $message .= '<ul><li>' . implode('</li><li>', $error_details) . '</li></ul>';
+            }
+            $message .= '</div>';
+            echo $message;
         } else {
-            echo '<div class="alert alert-danger">No scores were updated.</div>';
+            echo '<div class="alert alert-danger">No scores were updated. Errors:<br><ul><li>' . 
+                 implode('</li><li>', $error_details) . '</li></ul></div>';
         }
     }
 }
@@ -201,7 +272,9 @@ $applicants_query = "
         p.program_id,
         er.score,
         er.status,
-        er.created_at as exam_date,
+        es.exam_date,
+        er.exam_id,
+        es.exam_id as current_exam_id,
         CASE 
             WHEN er.score IS NULL THEN 'pending'
             WHEN er.score >= 75 THEN 'passed'
@@ -209,7 +282,9 @@ $applicants_query = "
         END as result_status
     FROM applicants a
     LEFT JOIN programs p ON a.primary_program_id = p.program_id
-    LEFT JOIN exam_results er ON a.user_id = er.user_id
+    LEFT JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
+    LEFT JOIN exam_schedules es ON reg.exam_schedule_id = es.exam_id AND es.status = 'completed'
+    LEFT JOIN exam_results er ON a.user_id = er.user_id AND er.exam_id = es.exam_id
     WHERE 1=1
 ";
 
@@ -439,7 +514,7 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                                             </span>
                                         </td>
                                         <td>
-                                            <?php echo $applicant['exam_date'] ? date('M d, Y', strtotime($applicant['exam_date'])) : 'N/A'; ?>
+                                            <?php echo $applicant['exam_date'] ? date('M d, Y', strtotime($applicant['exam_date'])) : 'Not Scheduled'; ?>
                                         </td>
                                         <td>
                                             <button type="button" 
@@ -552,14 +627,4 @@ function clearScore(button) {
     input.value = '';
     updateStatus(input);
 }
-</script>
-
-<!-- Add DataTables Buttons CSS and JS -->
-<link href="../assets/vendor/datatables-buttons/css/buttons.bootstrap4.min.css" rel="stylesheet">
-<script src="../assets/vendor/datatables-buttons/js/dataTables.buttons.min.js"></script>
-<script src="../assets/vendor/datatables-buttons/js/buttons.bootstrap4.min.js"></script>
-<script src="../assets/vendor/datatables-buttons/js/buttons.html5.min.js"></script>
-<script src="../assets/vendor/datatables-buttons/js/buttons.print.min.js"></script>
-<script src="../assets/vendor/jszip/jszip.min.js"></script>
-<script src="../assets/vendor/pdfmake/pdfmake.min.js"></script>
-<script src="../assets/vendor/pdfmake/vfs_fonts.js"></script> 
+</script> 

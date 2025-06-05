@@ -241,14 +241,4 @@ $(document).ready(function() {
         ]
     });
 });
-</script>
-
-<!-- Add DataTables Buttons CSS and JS -->
-<link href="../assets/vendor/datatables-buttons/css/buttons.bootstrap4.min.css" rel="stylesheet">
-<script src="../assets/vendor/datatables-buttons/js/dataTables.buttons.min.js"></script>
-<script src="../assets/vendor/datatables-buttons/js/buttons.bootstrap4.min.js"></script>
-<script src="../assets/vendor/datatables-buttons/js/buttons.html5.min.js"></script>
-<script src="../assets/vendor/datatables-buttons/js/buttons.print.min.js"></script>
-<script src="../assets/vendor/jszip/jszip.min.js"></script>
-<script src="../assets/vendor/pdfmake/pdfmake.min.js"></script>
-<script src="../assets/vendor/pdfmake/vfs_fonts.js"></script> 
+</script> 

@@ -438,3 +438,168 @@ max_participants: 20
 Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
 Successfully added exam schedule with ID: 2
 2025-05-30 15:57:28 - Request completed
+
+
+2025-06-02 17:23:50 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-06-09
+    [time] => 08:00
+    [venue] => Erams East
+    [max_participants] => 50
+)
+
+Received data:
+exam_date: 2025-06-09
+exam_time: 08:00
+venue: Erams East
+max_participants: 50
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 3
+2025-06-02 17:23:50 - Request completed
+
+
+2025-06-02 17:24:06 - New request started
+POST data: Array
+(
+    [student_id] => 31
+    [exam_date] => 2025-06-03
+    [exam_time] => 9:00 AM - 12:00 PM
+)
+
+Received data:
+exam_date: 
+exam_time: 
+venue: 
+max_participants: 
+Validation failed - missing required fields
+
+
+2025-06-02 17:24:16 - New request started
+POST data: Array
+(
+    [student_id] => 31
+    [exam_date] => 
+    [exam_time] => 9:00 AM - 12:00 PM
+)
+
+Received data:
+exam_date: 
+exam_time: 
+venue: 
+max_participants: 
+Validation failed - missing required fields
+
+
+2025-06-02 18:24:41 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-06-10
+    [time] => 07:00
+    [venue] => TUP VISAYAS
+    [max_participants] => 50
+)
+
+Received data:
+exam_date: 2025-06-10
+exam_time: 07:00
+venue: TUP VISAYAS
+max_participants: 50
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 4
+2025-06-02 18:24:41 - Request completed
+
+
+2025-06-02 18:26:03 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 4
+)
+
+Received data:
+exam_date: 
+exam_time: 
+venue: 
+max_participants: 
+Validation failed - missing required fields
+
+
+2025-06-02 18:26:15 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 4
+)
+
+Received data:
+exam_date: 
+exam_time: 
+venue: 
+max_participants: 
+Validation failed - missing required fields
+
+
+2025-06-02 18:28:05 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 4
+)
+
+Received data:
+exam_date: 
+exam_time: 
+venue: 
+max_participants: 
+Validation failed - missing required fields
+
+
+2025-06-02 18:28:07 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 1
+)
+
+Received data:
+exam_date: 
+exam_time: 
+venue: 
+max_participants: 
+Validation failed - missing required fields
+
+
+2025-06-02 18:28:13 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 4
+)
+
+Received data:
+exam_date: 
+exam_time: 
+venue: 
+max_participants: 
+Validation failed - missing required fields
+
+
+2025-06-02 18:29:17 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 4
+)
+
+
+
+2025-06-05 05:04:06 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 2
+)
+

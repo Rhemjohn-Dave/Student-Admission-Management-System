@@ -138,6 +138,8 @@ $modals = '';
                                     <td>
                                         <?php if ($schedule['status'] == 'scheduled'): ?>
                                             <span class="badge badge-success">Open</span>
+                                        <?php elseif ($schedule['status'] == 'completed'): ?>
+                                            <span class="badge badge-info">Completed</span>
                                         <?php else: ?>
                                             <span class="badge badge-danger">Closed</span>
                                         <?php endif; ?>
@@ -147,13 +149,12 @@ $modals = '';
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         <?php if ($schedule['status'] == 'scheduled'): ?>
-                                        <form method="POST" class="d-inline">
-                                            <input type="hidden" name="schedule_id" value="<?php echo $schedule['exam_id']; ?>">
-                                            <button type="submit" name="close_schedule" class="btn btn-danger btn-sm"
-                                                    title="Close Schedule">
-                                                <i class="fas fa-times"></i>
+                                            <button class="btn btn-danger btn-sm" onclick="closeSchedule(<?php echo $schedule['exam_id']; ?>)">
+                                                <i class="fas fa-times"></i> Close
                                             </button>
-                                        </form>
+                                            <button class="btn btn-success btn-sm" onclick="completeSchedule(<?php echo $schedule['exam_id']; ?>)">
+                                                <i class="fas fa-check"></i> Complete
+                                            </button>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
@@ -400,11 +401,11 @@ $(document).ready(function() {
         
         Swal.fire({
             title: 'Are you sure?',
-            text: "This will close the exam schedule. This action cannot be undone!",
+            text: "This will close the exam schedule and prevent new registrations.",
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#3085d6',
-            cancelButtonColor: '#d33',
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
             confirmButtonText: 'Yes, close it!'
         }).then((result) => {
             if (result.isConfirmed) {
@@ -474,4 +475,96 @@ $(document).ready(function() {
     // Initialize tooltips
     $('[title]').tooltip();
 });
+
+function closeSchedule(scheduleId) {
+    Swal.fire({
+        title: 'Are you sure?',
+        text: "This will close the exam schedule and prevent new registrations.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Yes, close it!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Create form data
+            const formData = new FormData();
+            formData.append('action', 'close_schedule');
+            formData.append('schedule_id', scheduleId);
+
+            // Send AJAX request
+            fetch('handle_exam_schedule.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message,
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        // Reload the page to show the updated status
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: data.message
+                    });
+                }
+            });
+        }
+    });
+}
+
+function completeSchedule(scheduleId) {
+    Swal.fire({
+        title: 'Mark Exam as Completed?',
+        text: "This will allow you to encode exam grades for this schedule.",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, mark as completed!'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Create form data
+            const formData = new FormData();
+            formData.append('action', 'complete_schedule');
+            formData.append('schedule_id', scheduleId);
+
+            // Send AJAX request
+            fetch('handle_exam_schedule.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message,
+                        showConfirmButton: false,
+                        timer: 1500
+                    }).then(() => {
+                        // Reload the page to show the updated status
+                        location.reload();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: data.message
+                    });
+                }
+            });
+        }
+    });
+}
 </script> 

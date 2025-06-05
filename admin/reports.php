@@ -8,6 +8,12 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
     exit();
 }
 
+// Set page title
+$page_title = "Reports - Student Admissions Management System";
+
+// Include header
+include '../includes/header.php';
+
 // Get all programs for the dropdown
 $programs_query = "SELECT program_id, program_name FROM programs ORDER BY program_name";
 $programs = mysqli_query($conn, $programs_query);
@@ -39,10 +45,10 @@ $schedules_query = "
         es.exam_time,
         es.venue,
         es.max_participants,
+        es.status,
         (SELECT COUNT(*) FROM exam_registrations er WHERE er.exam_schedule_id = es.exam_id AND er.status = 'registered') as registered_count
     FROM exam_schedules es
-    WHERE es.exam_date >= CURDATE()
-    ORDER BY es.exam_date ASC, es.exam_time ASC
+    ORDER BY es.exam_date DESC, es.exam_time DESC
 ";
 
 $schedules_result = mysqli_query($conn, $schedules_query);
@@ -76,7 +82,8 @@ $schedules_result = mysqli_query($conn, $schedules_query);
                                                     echo date('F d, Y', strtotime($schedule['exam_date'])) . ' - ' . 
                                                          date('h:i A', strtotime($schedule['exam_time'])) . ' - ' . 
                                                          htmlspecialchars($schedule['venue']) . 
-                                                         ' (' . $schedule['registered_count'] . ' registered)';
+                                                         ' (' . $schedule['registered_count'] . ' registered) - ' .
+                                                         ucfirst($schedule['status']);
                                                 ?>
                                             </option>
                                         <?php endwhile; ?>
@@ -215,5 +222,17 @@ $(document).ready(function() {
         theme: 'bootstrap4',
         width: '100%'
     });
+
+    // Initialize DataTables with export buttons
+    $('.datatable').DataTable({
+        dom: 'Bfrtip',
+        buttons: [
+            'copy', 'csv', 'excel', 'pdf', 'print'
+        ],
+        pageLength: 25,
+        order: [[0, 'asc']]
+    });
 });
-</script> 
+</script>
+
+<?php include '../includes/footer.php'; ?> 

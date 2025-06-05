@@ -1,11 +1,16 @@
 <?php
-require_once '../config/database.php';
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 // Check if user is logged in and is an interviewer
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'interviewer') {
     header("location: ../auth/login.php");
     exit();
 }
+
+require_once '../config/database.php';
 
 $user_id = $_SESSION['user_id'];
 
@@ -438,15 +443,4 @@ $schedules = $schedules_stmt->get_result();
             </div>
         <?php endif; ?>
     </div>
-</div>
-
-<script>
-$(document).ready(function() {
-    $('#dataTable').DataTable({
-        "order": [[2, "asc"], [3, "asc"]] // Sort by date and time
-    });
-    $('#schedulesTable').DataTable({
-        "order": [[0, "asc"]] // Sort by date
-    });
-});
-</script> 
+</div> 
