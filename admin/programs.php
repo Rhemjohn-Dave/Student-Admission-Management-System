@@ -13,11 +13,10 @@ if (!$conn) {
 // Fetch all programs with college information
 $programs_query = "
     SELECT p.*, c.college_name, c.college_code,
-           CONCAT(u.first_name, ' ', u.last_name) as program_head_name
+           CONCAT(u.first_name, ' ', u.last_name) as program_head_name, u.user_id as program_head_user_id
     FROM programs p 
     LEFT JOIN colleges c ON p.college_id = c.college_id 
-    LEFT JOIN program_heads ph ON p.program_head_id = ph.program_head_id
-    LEFT JOIN users u ON ph.user_id = u.user_id
+    LEFT JOIN users u ON p.program_head_id = u.user_id
     ORDER BY c.college_name, p.program_name
 ";
 
@@ -65,12 +64,7 @@ if (!$colleges) {
 }
 
 // Fetch all program heads for the dropdown
-$program_heads_query = "
-    SELECT ph.*, u.first_name, u.last_name 
-    FROM program_heads ph 
-    JOIN users u ON ph.user_id = u.user_id 
-    ORDER BY u.last_name, u.first_name
-";
+$program_heads_query = "SELECT u.user_id, u.first_name, u.last_name FROM users u WHERE u.user_type != 'admin' ORDER BY u.last_name, u.first_name";
 $program_heads = mysqli_query($conn, $program_heads_query);
 
 // Debug: Check database connection
@@ -147,7 +141,7 @@ if (!$conn) {
                                                 data-name="<?php echo htmlspecialchars($row['program_name']); ?>"
                                                 data-code="<?php echo htmlspecialchars($row['program_code']); ?>"
                                                 data-college="<?php echo $row['college_id']; ?>"
-                                                data-head="<?php echo $row['program_head_id']; ?>"
+                                                data-head="<?php echo $row['program_head_user_id']; ?>"
                                                 title="Edit Program">
                                             <i class="fas fa-edit"></i>
                                         </button>
@@ -210,10 +204,10 @@ if (!$conn) {
                         <select class="form-control" id="program_head_id" name="program_head_id" required>
                             <option value="">Select Program Head</option>
                             <?php 
-                            mysqli_data_seek($program_heads, 0);
-                            while($row = mysqli_fetch_assoc($program_heads)): 
-                            ?>
-                                <option value="<?php echo $row['program_head_id']; ?>">
+                            $program_heads_query = "SELECT u.user_id, u.first_name, u.last_name FROM users u WHERE u.user_type != 'admin' ORDER BY u.last_name, u.first_name";
+                            $program_heads = mysqli_query($conn, $program_heads_query);
+                            while($row = mysqli_fetch_assoc($program_heads)): ?>
+                                <option value="<?php echo $row['user_id']; ?>">
                                     <?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?>
                                 </option>
                             <?php endwhile; ?>
@@ -270,13 +264,16 @@ if (!$conn) {
                         <select class="form-control" id="edit_program_head_id" name="program_head_id" required>
                             <option value="">Select Program Head</option>
                             <?php 
-                            mysqli_data_seek($program_heads, 0);
-                            while($row = mysqli_fetch_assoc($program_heads)): 
+                            $current_head_user_id = $row['program_head_user_id'];
+                            $program_heads_query = "SELECT u.user_id, u.first_name, u.last_name FROM users u WHERE u.user_type != 'admin' ORDER BY u.last_name, u.first_name";
+                            $program_heads = mysqli_query($conn, $program_heads_query);
+                            while($ph_row = mysqli_fetch_assoc($program_heads)) {
+                                $selected = ($ph_row['user_id'] == $current_head_user_id) ? 'selected' : '';
+                                echo '<option value="' . $ph_row['user_id'] . '" ' . $selected . '>' .
+                                     htmlspecialchars($ph_row['first_name'] . ' ' . $ph_row['last_name']) .
+                                     '</option>';
+                            }
                             ?>
-                                <option value="<?php echo $row['program_head_id']; ?>">
-                                    <?php echo htmlspecialchars($row['first_name'] . ' ' . $row['last_name']); ?>
-                                </option>
-                            <?php endwhile; ?>
                         </select>
                     </div>
                 </div>

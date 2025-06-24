@@ -571,13 +571,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         JOIN applications app ON i.application_id = app.application_id
                         JOIN applicants a ON app.user_id = a.user_id
                         JOIN users u ON a.user_id = u.user_id
-                        JOIN programs p ON a.primary_program_id = p.program_id
+                        JOIN programs p ON (a.primary_program_id = p.program_id OR a.secondary_program_id = p.program_id)
                         JOIN interview_schedules s ON s.program_id = p.program_id 
                             AND s.interview_date = i.scheduled_date
-                            AND CASE 
-                                WHEN s.time_window = 'AM' THEN TIME(i.scheduled_time) < '12:00:00'
-                                ELSE TIME(i.scheduled_time) >= '12:00:00'
-                            END
+                            AND s.time_window = i.scheduled_time
                         WHERE s.schedule_id = ?
                         " . ($program_id ? "AND p.program_id = " . $program_id : "") . "
                         ORDER BY a.last_name ASC, a.first_name ASC
@@ -821,7 +818,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 mysqli_stmt_close($stmt);
 
                 if ($program) {
-                    // Get final rankings with both exam and interview scores
+                    // Get final rankings with both exam and interview scores, only one row per applicant
                     $rankings_query = "
                         SELECT * FROM (
                             SELECT 
@@ -832,23 +829,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 a.gender,
                                 p.program_name,
                                 esc.score as exam_score,
-                                i.score as interview_score,
+                                -- Only get the highest scored interview for this applicant/program
+                                (
+                                    SELECT i2.score FROM interviews i2
+                                    JOIN applications app2 ON i2.application_id = app2.application_id
+                                    WHERE app2.user_id = a.user_id AND app2.program_id = p.program_id AND i2.status = 'completed'
+                                    ORDER BY i2.score DESC, i2.completed_date DESC LIMIT 1
+                                ) as interview_score,
+                                (
+                                    SELECT i2.result FROM interviews i2
+                                    JOIN applications app2 ON i2.application_id = app2.application_id
+                                    WHERE app2.user_id = a.user_id AND app2.program_id = p.program_id AND i2.status = 'completed'
+                                    ORDER BY i2.score DESC, i2.completed_date DESC LIMIT 1
+                                ) as interview_result,
                                 ROUND(
                                     (COALESCE(esc.score, 0) * 0.75) + 
-                                    ((COALESCE(i.score, 0) / 25 * 100) * 0.25), 
+                                    ((COALESCE((
+                                        SELECT i2.score FROM interviews i2
+                                        JOIN applications app2 ON i2.application_id = app2.application_id
+                                        WHERE app2.user_id = a.user_id AND app2.program_id = p.program_id AND i2.status = 'completed'
+                                        ORDER BY i2.score DESC, i2.completed_date DESC LIMIT 1
+                                    ), 0) / 25 * 100) * 0.25), 
                                     2
                                 ) as final_score,
                                 RANK() OVER (
                                     ORDER BY (
                                         (COALESCE(esc.score, 0) * 0.75) + 
-                                        ((COALESCE(i.score, 0) / 25 * 100) * 0.25)
+                                        ((COALESCE((
+                                            SELECT i2.score FROM interviews i2
+                                            JOIN applications app2 ON i2.application_id = app2.application_id
+                                            WHERE app2.user_id = a.user_id AND app2.program_id = p.program_id AND i2.status = 'completed'
+                                            ORDER BY i2.score DESC, i2.completed_date DESC LIMIT 1
+                                        ), 0) / 25 * 100) * 0.25)
                                     ) DESC
                                 ) as overall_rank,
-                                CASE 
-                                    WHEN i.result = 'passed' THEN 'Passed'
-                                    WHEN i.result = 'failed' THEN 'Failed'
-                                    ELSE 'Pending'
-                                END as interview_result,
                                 pc.start_rank,
                                 pc.end_rank,
                                 'Qualified' as final_status
@@ -856,8 +870,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
                             JOIN programs p ON a.primary_program_id = p.program_id
                             LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
-                            LEFT JOIN applications app ON a.user_id = app.user_id
-                            LEFT JOIN interviews i ON app.application_id = i.application_id
                             LEFT JOIN program_cutoffs pc ON p.program_id = pc.program_id
                             WHERE p.program_id = ?
                             AND esc.score IS NOT NULL

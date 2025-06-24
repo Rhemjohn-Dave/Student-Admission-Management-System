@@ -33,10 +33,9 @@ if ($stmt = mysqli_prepare($conn, $interviewer_query)) {
     $interviewer = mysqli_fetch_assoc($result);
 }
 
-// Handle status update
+// Handle status update (move this before any output or includes)
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
     $interview_id = $_POST['interview_id'];
-    
     if ($_POST['action'] == 'complete') {
         $result = $_POST['result'];
         $notes = $_POST['notes'];
@@ -45,11 +44,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         $comprehension_thinking = $_POST['comprehension_thinking'];
         $program_skills = $_POST['program_skills'];
         $financial_capacity = $_POST['financial_capacity'];
-        
         // Calculate total score (out of 25)
-        $total_score = $interest_motivation + $communication_skills + $comprehension_thinking + 
-                      $program_skills + $financial_capacity;
-        
+        $total_score = $interest_motivation + $communication_skills + $comprehension_thinking + $program_skills + $financial_capacity;
         // Format the notes to include evaluation scores
         $evaluation_notes = "Evaluation Scores:\n";
         $evaluation_notes .= "Interest and Motivation: $interest_motivation/5\n";
@@ -59,7 +55,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
         $evaluation_notes .= "Financial Capacity: $financial_capacity/5\n";
         $evaluation_notes .= "Total Score: $total_score/25\n\n";
         $evaluation_notes .= "Additional Notes:\n" . $notes;
-        
         $stmt = $conn->prepare("
             UPDATE interviews 
             SET status = 'completed', 
@@ -70,16 +65,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action'])) {
             WHERE interview_id = ? AND program_head_id = ?
         ");
         $stmt->bind_param("sdsii", $result, $total_score, $evaluation_notes, $interview_id, $interviewer['program_head_id']);
-        
         if ($stmt->execute()) {
             $_SESSION['success'] = "Interview evaluation submitted successfully.";
         } else {
             $_SESSION['error'] = "Failed to submit interview evaluation.";
         }
-        
         // Redirect to refresh the page
-        header("location: index.php?page=interview_schedules");
-        exit();
+        if (!headers_sent()) {
+            header("location: index.php?page=interview_schedules");
+            exit();
+        } else {
+            echo '<script>window.location.href = "index.php?page=interview_schedules";</script>';
+            echo '<noscript><meta http-equiv="refresh" content="0;url=index.php?page=interview_schedules"></noscript>';
+            echo '<div class="alert alert-warning">Redirecting... If you are not redirected, <a href="index.php?page=interview_schedules">click here</a>.</div>';
+            exit();
+        }
     }
 }
 
@@ -129,6 +129,13 @@ $schedules_stmt = $conn->prepare("
 $schedules_stmt->bind_param("i", $interviewer['program_id']);
 $schedules_stmt->execute();
 $schedules = $schedules_stmt->get_result();
+
+// Move this line to after all form handling and redirects:
+// include '../includes/navbar.php';
+
+// Just before the first HTML output:
+include '../includes/navbar.php';
+
 ?>
 
 <!-- Page Heading -->

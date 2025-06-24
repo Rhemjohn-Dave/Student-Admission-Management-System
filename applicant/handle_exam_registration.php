@@ -2,6 +2,9 @@
 session_start();
 require_once "../config/database.php";
 
+// Debugging: Log POST data
+file_put_contents('exam_registration_debug.log', print_r($_POST, true), FILE_APPEND);
+
 // Check if user is logged in and is an applicant
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'applicant') {
     echo json_encode([

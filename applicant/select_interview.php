@@ -37,33 +37,38 @@ if ($stmt = mysqli_prepare($conn, $applicant_query)) {
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['schedule_id'])) {
     $schedule_id = $_POST['schedule_id'];
     
-    // Check if applicant already has an interview scheduled
-    $check_query = "SELECT COUNT(*) as count FROM interviews WHERE application_id IN (SELECT application_id FROM applications WHERE user_id = ?)";
-    if ($stmt = mysqli_prepare($conn, $check_query)) {
-        mysqli_stmt_bind_param($stmt, "i", $user_id);
+    // Get the schedule details (to know which program this is for)
+    $schedule_query = "
+        SELECT s.*, p.program_name, p.program_id, CONCAT(u.first_name, ' ', u.last_name) as interviewer_name
+        FROM interview_schedules s
+        JOIN programs p ON s.program_id = p.program_id
+        JOIN program_heads ph ON p.program_id = ph.program_id
+        JOIN users u ON ph.user_id = u.user_id
+        WHERE s.schedule_id = ? AND s.status = 'open'
+    ";
+    if ($stmt = mysqli_prepare($conn, $schedule_query)) {
+        mysqli_stmt_bind_param($stmt, "i", $schedule_id);
         mysqli_stmt_execute($stmt);
         $result = mysqli_stmt_get_result($stmt);
-        $count = mysqli_fetch_assoc($result)['count'];
+        $schedule = mysqli_fetch_assoc($result);
         
-        if ($count > 0) {
-            $_SESSION['error'] = "You already have an interview scheduled.";
-        } else {
-            // Get the schedule details
-            $schedule_query = "
-                SELECT s.*, p.program_name, CONCAT(u.first_name, ' ', u.last_name) as interviewer_name
-                FROM interview_schedules s
-                JOIN programs p ON s.program_id = p.program_id
-                JOIN program_heads ph ON p.program_id = ph.program_id
-                JOIN users u ON ph.user_id = u.user_id
-                WHERE s.schedule_id = ? AND s.status = 'open'
+        if ($schedule) {
+            // Check if applicant already has an interview for this program
+            $check_query = "
+                SELECT COUNT(*) as count
+                FROM interviews i
+                JOIN applications a ON i.application_id = a.application_id
+                WHERE a.user_id = ? AND a.program_id = ?
             ";
-            if ($stmt = mysqli_prepare($conn, $schedule_query)) {
-                mysqli_stmt_bind_param($stmt, "i", $schedule_id);
+            if ($stmt = mysqli_prepare($conn, $check_query)) {
+                mysqli_stmt_bind_param($stmt, "ii", $user_id, $schedule['program_id']);
                 mysqli_stmt_execute($stmt);
                 $result = mysqli_stmt_get_result($stmt);
-                $schedule = mysqli_fetch_assoc($result);
+                $count = mysqli_fetch_assoc($result)['count'];
                 
-                if ($schedule) {
+                if ($count > 0) {
+                    $_SESSION['error'] = "You already have an interview scheduled for this program.";
+                } else {
                     // Get or create the application ID
                     $application_query = "SELECT application_id FROM applications WHERE user_id = ? AND program_id = ?";
                     if ($stmt = mysqli_prepare($conn, $application_query)) {
@@ -145,10 +150,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['schedule_id'])) {
                             $_SESSION['error'] = "Error creating application record.";
                         }
                     }
-                } else {
-                    $_SESSION['error'] = "Schedule not available.";
                 }
             }
+        } else {
+            $_SESSION['error'] = "Schedule not available.";
         }
     }
 }

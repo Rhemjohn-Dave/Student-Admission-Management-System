@@ -903,3 +903,125 @@ Registration count: Array
     [registered_count] => 1
 )
 
+
+
+2025-06-24 16:10:27 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-06-30
+    [time] => 08:00
+    [venue] => TUP Sagay
+    [max_participants] => 100
+)
+
+Received data for new schedule:
+exam_date: 2025-06-30
+exam_time: 08:00
+venue: TUP Sagay
+max_participants: 100
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 0
+
+
+2025-06-24 16:12:22 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-06-25
+    [time] => 08:00
+    [venue] => UITC
+    [max_participants] => 100
+)
+
+Received data for new schedule:
+exam_date: 2025-06-25
+exam_time: 08:00
+venue: UITC
+max_participants: 100
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Error occurred: Error adding exam schedule: Duplicate entry '0' for key 'PRIMARY'
+
+
+2025-06-24 16:12:48 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-06-29
+    [time] => 08:10
+    [venue] => UITC
+    [max_participants] => 100
+)
+
+Received data for new schedule:
+exam_date: 2025-06-29
+exam_time: 08:10
+venue: UITC
+max_participants: 100
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Error occurred: Error adding exam schedule: Duplicate entry '0' for key 'PRIMARY'
+
+
+2025-06-24 16:26:36 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-06-25
+    [time] => 10:26
+    [venue] => TUP Sagay
+    [max_participants] => 100
+)
+
+Received data for new schedule:
+exam_date: 2025-06-25
+exam_time: 10:26
+venue: TUP Sagay
+max_participants: 100
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 1
+
+
+2025-06-24 18:15:28 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-06-30
+    [time] => 08:00
+    [venue] => TUP Visayas
+    [max_participants] => 1000
+)
+
+Received data for new schedule:
+exam_date: 2025-06-30
+exam_time: 08:00
+venue: TUP Visayas
+max_participants: 1000
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 1
+
+
+2025-06-24 19:30:06 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 1
+)
+
+Checking schedule ID: 1
+Schedule found: Array
+(
+    [exam_id] => 1
+    [exam_date] => 2025-06-30
+    [exam_time] => 08:00:00
+    [venue] => TUP Visayas
+    [max_participants] => 1000
+    [status] => scheduled
+    [created_at] => 2025-06-25 00:15:28
+    [updated_at] => 2025-06-25 00:15:28
+)
+
+Registration count: Array
+(
+    [registered_count] => 2
+)
+

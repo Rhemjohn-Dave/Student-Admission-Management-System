@@ -9,70 +9,75 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'interviewer') {
 
 $user_id = $_SESSION['user_id'];
 
-// Get interviewer's program information
-$interviewer_query = "
-    SELECT 
-        u.*,
-        p.program_name,
-        p.program_id
-    FROM users u
-    JOIN interviewers i ON u.user_id = i.user_id
-    JOIN programs p ON i.program_id = p.program_id
-    WHERE u.user_id = ?
+// Get the assigned program for the current user (program head)
+$assigned_program = null;
+$program_head_query = "
+    SELECT p.program_name, p.program_id
+    FROM program_heads ph
+    JOIN programs p ON ph.program_id = p.program_id
+    WHERE ph.user_id = ? AND ph.status = 'active'
+    LIMIT 1
 ";
-
-$interviewer = null;
-if ($stmt = mysqli_prepare($conn, $interviewer_query)) {
+if ($stmt = mysqli_prepare($conn, $program_head_query)) {
     mysqli_stmt_bind_param($stmt, "i", $user_id);
     mysqli_stmt_execute($stmt);
     $result = mysqli_stmt_get_result($stmt);
-    $interviewer = mysqli_fetch_assoc($result);
+    $assigned_program = mysqli_fetch_assoc($result);
 }
 
-// Get upcoming interviews
-$interviews_query = "
-    SELECT 
-        s.*,
-        u.first_name,
-        u.last_name,
-        p.program_name
-    FROM interview_schedules s
-    JOIN users u ON s.created_by = u.user_id
-    JOIN programs p ON s.program_id = p.program_id
-    WHERE s.created_by = ? AND s.status = 'open'
-    ORDER BY s.interview_date ASC
-    LIMIT 5
-";
-
+// Default values
+$upcoming_interviews_count = 0;
+$completed_interviews_count = 0;
+$total_applicants = 0;
 $upcoming_interviews = [];
-if ($stmt = mysqli_prepare($conn, $interviews_query)) {
-    mysqli_stmt_bind_param($stmt, "i", $user_id);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $upcoming_interviews = mysqli_fetch_all($result, MYSQLI_ASSOC);
-}
 
-// Get recent interviews
-$recent_interviews_query = "
-    SELECT 
-        s.*,
-        u.first_name,
-        u.last_name,
-        p.program_name
-    FROM interview_schedules s
-    JOIN users u ON s.created_by = u.user_id
-    JOIN programs p ON s.program_id = p.program_id
-    WHERE s.created_by = ? AND s.status = 'completed'
-    ORDER BY s.interview_date DESC
-    LIMIT 5
-";
-
-$recent_interviews = [];
-if ($stmt = mysqli_prepare($conn, $recent_interviews_query)) {
-    mysqli_stmt_bind_param($stmt, "i", $user_id);
-    mysqli_stmt_execute($stmt);
-    $result = mysqli_stmt_get_result($stmt);
-    $recent_interviews = mysqli_fetch_all($result, MYSQLI_ASSOC);
+if ($assigned_program && isset($assigned_program['program_id'])) {
+    $program_id = $assigned_program['program_id'];
+    // 1. Upcoming Interviews: scheduled interviews not yet scored
+    $upcoming_query = "
+        SELECT i.*, s.interview_date, s.time_window, p.program_name, s.current_applicants
+        FROM interviews i
+        JOIN applications a ON i.application_id = a.application_id
+        JOIN interview_schedules s ON s.program_id = a.program_id AND s.interview_date = i.scheduled_date AND s.time_window = i.scheduled_time
+        JOIN programs p ON a.program_id = p.program_id
+        WHERE a.program_id = ? AND i.status = 'scheduled' AND (i.score IS NULL OR i.score = '')
+        ORDER BY i.scheduled_date ASC
+    ";
+    if ($stmt = mysqli_prepare($conn, $upcoming_query)) {
+        mysqli_stmt_bind_param($stmt, "i", $program_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $upcoming_interviews = mysqli_fetch_all($result, MYSQLI_ASSOC);
+        $upcoming_interviews_count = count($upcoming_interviews);
+    }
+    // 2. Completed Interviews: interviews finished and graded by the interviewer
+    $completed_query = "
+        SELECT COUNT(*) as total
+        FROM interviews i
+        JOIN applications a ON i.application_id = a.application_id
+        WHERE a.program_id = ? AND i.status = 'completed' AND (i.score IS NOT NULL AND i.score != '')
+    ";
+    if ($stmt = mysqli_prepare($conn, $completed_query)) {
+        mysqli_stmt_bind_param($stmt, "i", $program_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $row = mysqli_fetch_assoc($result);
+        $completed_interviews_count = $row ? (int)$row['total'] : 0;
+    }
+    // 3. Total Applicants: unique applicants scheduled for interview in this program
+    $applicants_query = "
+        SELECT COUNT(DISTINCT a.user_id) as total
+        FROM interviews i
+        JOIN applications a ON i.application_id = a.application_id
+        WHERE a.program_id = ?
+    ";
+    if ($stmt = mysqli_prepare($conn, $applicants_query)) {
+        mysqli_stmt_bind_param($stmt, "i", $program_id);
+        mysqli_stmt_execute($stmt);
+        $result = mysqli_stmt_get_result($stmt);
+        $row = mysqli_fetch_assoc($result);
+        $total_applicants = $row && $row['total'] !== null ? (int)$row['total'] : 0;
+    }
 }
 ?>
 
@@ -89,10 +94,10 @@ if ($stmt = mysqli_prepare($conn, $recent_interviews_query)) {
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                        <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">
                             Assigned Program</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            <?php echo $interviewer ? $interviewer['program_name'] : 'Not Assigned'; ?>
+                            <?php echo ($assigned_program && isset($assigned_program['program_name'])) ? $assigned_program['program_name'] : 'Not Assigned'; ?>
                         </div>
                     </div>
                     <div class="col-auto">
@@ -112,7 +117,7 @@ if ($stmt = mysqli_prepare($conn, $recent_interviews_query)) {
                         <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
                             Upcoming Interviews</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            <?php echo count($upcoming_interviews); ?>
+                            <?php echo $upcoming_interviews_count; ?>
                         </div>
                     </div>
                     <div class="col-auto">
@@ -132,7 +137,7 @@ if ($stmt = mysqli_prepare($conn, $recent_interviews_query)) {
                         <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
                             Completed Interviews</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            <?php echo count($recent_interviews); ?>
+                            <?php echo $completed_interviews_count; ?>
                         </div>
                     </div>
                     <div class="col-auto">
@@ -152,13 +157,7 @@ if ($stmt = mysqli_prepare($conn, $recent_interviews_query)) {
                         <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
                             Total Applicants</div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800">
-                            <?php 
-                            $total_applicants = 0;
-                            foreach ($upcoming_interviews as $interview) {
-                                $total_applicants += $interview['current_applicants'];
-                            }
-                            echo $total_applicants;
-                            ?>
+                            <?php echo $total_applicants; ?>
                         </div>
                     </div>
                     <div class="col-auto">
@@ -193,10 +192,10 @@ if ($stmt = mysqli_prepare($conn, $recent_interviews_query)) {
                         <tbody>
                             <?php foreach ($upcoming_interviews as $interview): ?>
                                 <tr>
-                                    <td><?php echo date('F d, Y', strtotime($interview['interview_date'])); ?></td>
-                                    <td><?php echo date('h:i A', strtotime($interview['interview_time'])); ?></td>
-                                    <td><?php echo $interview['program_name']; ?></td>
-                                    <td><?php echo $interview['current_applicants']; ?></td>
+                                    <td><?php echo isset($interview['interview_date']) ? date('F d, Y', strtotime($interview['interview_date'])) : ''; ?></td>
+                                    <td><?php echo isset($interview['time_window']) ? $interview['time_window'] : ''; ?></td>
+                                    <td><?php echo isset($interview['program_name']) ? $interview['program_name'] : ''; ?></td>
+                                    <td><?php echo isset($interview['current_applicants']) ? $interview['current_applicants'] : ''; ?></td>
                                     <td>
                                         <span class="badge badge-<?php echo $interview['status'] === 'open' ? 'success' : 'warning'; ?>">
                                             <?php echo ucfirst($interview['status']); ?>
