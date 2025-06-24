@@ -1,18 +1,22 @@
 <?php
+// Start session if not already started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 require_once "../config/database.php";
 
-// Check if user is logged in and is an applicant
-
+// Robust session check for applicant
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'applicant') {
-    header("location: ../auth/login.php");
+    echo '<div class="alert alert-danger">Session lost or unauthorized access. Please <a href="../auth/login.php">log in again</a>.</div>';
     exit();
 }
 
 $user_id = $_SESSION['user_id'];
 $success = $error = "";
 
-// Handle form submission
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
+// Handle form submission before any output
+if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['profile_update'])) {
     // Get form data
     $first_name = trim($_POST["first_name"]);
     $middle_name = trim($_POST["middle_name"]);
@@ -60,21 +64,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             WHERE user_id = ?";
 
     if ($stmt = mysqli_prepare($conn, $sql)) {
-        mysqli_stmt_bind_param($stmt, "ssssssssssssssssssii", 
+        // Corrected parameter types: 16 strings, 5 integers
+        if (!mysqli_stmt_bind_param($stmt, "ssssssssssssssssiiiii", 
             $first_name, $middle_name, $last_name, $birth_date, $gender,
             $mobile_number, $address_lot, $address_street, $address_town,
             $address_city, $address_country, $address_zipcode,
             $mother_maiden_name, $father_name, $elementary_school,
             $elementary_year_graduated, $high_school, $high_school_year_graduated,
             $primary_program_id, $secondary_program_id, $user_id
-        );
-
-        if (mysqli_stmt_execute($stmt)) {
+        )) {
+            $error = "Parameter binding failed: " . mysqli_stmt_error($stmt);
+        } else if (mysqli_stmt_execute($stmt)) {
             $success = "Profile updated successfully.";
         } else {
-            $error = "Error updating profile: " . mysqli_error($conn);
+            $error = "Error updating profile: " . mysqli_stmt_error($stmt);
         }
+    } else {
+        $error = "Statement preparation failed: " . mysqli_error($conn);
     }
+}
+
+// Show success message if redirected
+if (isset($_GET['success']) && $_GET['success'] == 1) {
+    $success = "Profile updated successfully.";
 }
 
 // Get current applicant information
@@ -99,25 +111,38 @@ if ($stmt = mysqli_prepare($conn, $applicant_query)) {
 // Get all programs for dropdown
 $programs_query = "SELECT program_id, program_name FROM programs ORDER BY program_name";
 $programs_result = mysqli_query($conn, $programs_query);
+$programs = [];
+while ($row = mysqli_fetch_assoc($programs_result)) {
+    $programs[] = $row;
+}
 ?>
-
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Applicant Profile</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
 <div class="container-fluid">
     <h1 class="h3 mb-4 text-gray-800">Profile Management</h1>
-
+    <script>
     <?php if ($success): ?>
-        <div class="alert alert-success"><?php echo $success; ?></div>
+        Swal.fire({icon: 'success', title: 'Success', text: <?php echo json_encode($success); ?>});
     <?php endif; ?>
-
     <?php if ($error): ?>
-        <div class="alert alert-danger"><?php echo $error; ?></div>
+        Swal.fire({icon: 'error', title: 'Error', text: <?php echo json_encode($error); ?>});
     <?php endif; ?>
+    </script>
 
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <h6 class="m-0 font-weight-bold text-primary">Personal Information</h6>
         </div>
         <div class="card-body">
-            <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>">
+            <form method="post" action="index.php?page=profile">
+                <input type="hidden" name="profile_update" value="1">
                 <div class="row">
                     <div class="col-md-4">
                         <div class="form-group">
@@ -147,7 +172,7 @@ $programs_result = mysqli_query($conn, $programs_query);
                         <div class="form-group">
                             <label>Birth Date</label>
                             <input type="date" name="birth_date" class="form-control" 
-                                   value="<?php echo $applicant['birth_date']; ?>" required>
+                                   value="<?php echo ($applicant['birth_date'] && $applicant['birth_date'] !== '0000-00-00') ? $applicant['birth_date'] : ''; ?>" required>
                         </div>
                     </div>
                     <div class="col-md-4">
@@ -273,12 +298,11 @@ $programs_result = mysqli_query($conn, $programs_query);
                             <label>Primary Program</label>
                             <select name="primary_program_id" class="form-control" required>
                                 <option value="">Select Program</option>
-                                <?php while ($program = mysqli_fetch_assoc($programs_result)): ?>
-                                    <option value="<?php echo $program['program_id']; ?>" 
-                                        <?php echo $applicant['primary_program_id'] == $program['program_id'] ? 'selected' : ''; ?>>
+                                <?php foreach ($programs as $program): ?>
+                                    <option value="<?php echo $program['program_id']; ?>" <?php echo $applicant['primary_program_id'] == $program['program_id'] ? 'selected' : ''; ?>>
                                         <?php echo $program['program_name']; ?>
                                     </option>
-                                <?php endwhile; ?>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </div>
@@ -287,15 +311,11 @@ $programs_result = mysqli_query($conn, $programs_query);
                             <label>Secondary Program</label>
                             <select name="secondary_program_id" class="form-control">
                                 <option value="">Select Program</option>
-                                <?php 
-                                mysqli_data_seek($programs_result, 0); // Reset pointer
-                                while ($program = mysqli_fetch_assoc($programs_result)): 
-                                ?>
-                                    <option value="<?php echo $program['program_id']; ?>" 
-                                        <?php echo $applicant['secondary_program_id'] == $program['program_id'] ? 'selected' : ''; ?>>
+                                <?php foreach ($programs as $program): ?>
+                                    <option value="<?php echo $program['program_id']; ?>" <?php echo $applicant['secondary_program_id'] == $program['program_id'] ? 'selected' : ''; ?>>
                                         <?php echo $program['program_name']; ?>
                                     </option>
-                                <?php endwhile; ?>
+                                <?php endforeach; ?>
                             </select>
                         </div>
                     </div>
@@ -305,4 +325,6 @@ $programs_result = mysqli_query($conn, $programs_query);
             </form>
         </div>
     </div>
-</div> 
+</div>
+</body>
+</html> 

@@ -1,5 +1,5 @@
 <?php
-// Only start session if it hasn't been started
+// Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -7,9 +7,9 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once '../includes/auth_check.php';
 require_once '../config/database.php';
 
-// Check if user is logged in and is an interviewer
+// Robust session check for interviewer
 if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'interviewer') {
-    header("location: ../auth/login.php");
+    echo '<div class="alert alert-danger">Session lost or unauthorized access. Please <a href="../auth/login.php">log in again</a>.</div>';
     exit();
 }
 
@@ -37,7 +37,7 @@ if ($stmt = mysqli_prepare($conn, $interviewer_query)) {
     $interviewer = mysqli_fetch_assoc($result);
 }
 
-// Handle form submission
+// Handle form submission before any output
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $first_name = trim($_POST["first_name"]);
     $last_name = trim($_POST["last_name"]);
@@ -78,18 +78,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $types .= "i";
         
         $stmt = mysqli_prepare($conn, $sql);
-        mysqli_stmt_bind_param($stmt, $types, ...$params);
-        
-        if (mysqli_stmt_execute($stmt)) {
+        if (!$stmt) {
+            $errors[] = "Statement preparation failed: " . mysqli_error($conn);
+        } else if (!mysqli_stmt_bind_param($stmt, $types, ...$params)) {
+            $errors[] = "Parameter binding failed: " . mysqli_stmt_error($stmt);
+        } else if (mysqli_stmt_execute($stmt)) {
             $_SESSION['success'] = "Profile updated successfully.";
-            // Refresh the page to show updated information
-            header("Location: " . $_SERVER['PHP_SELF']);
-            exit();
         } else {
-            $errors[] = "Something went wrong. Please try again later.";
+            $errors[] = "Something went wrong. Please try again later. " . mysqli_stmt_error($stmt);
         }
     }
 }
 
-// Include the template file
+// Include the template file after all logic
 require_once 'templates/profile_template.php'; 
