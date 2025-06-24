@@ -90,7 +90,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
         try {
             // Insert into users table
-            $sql = "INSERT INTO users (username, password, email, user_type) VALUES (?, ?, ?, 'applicant')";
+            $sql = "INSERT INTO users (username, password, email, user_type, status) VALUES (?, ?, ?, 'applicant', 'active')";
             if ($stmt = mysqli_prepare($conn, $sql)) {
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
                 mysqli_stmt_bind_param($stmt, "sss", $username, $hashed_password, $email);

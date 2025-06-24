@@ -15,6 +15,12 @@ if (!in_array($page, $allowed_pages)) {
     $page = 'dashboard';
 }
 
+// Handle page-specific authentication and redirects before any output
+if ($page === 'interview_evaluation') {
+    require_once 'interview_evaluation.php';
+    exit();
+}
+
 $page_title = ucfirst(str_replace('_', ' ', $page)) . " - Student Admissions Management System";
 ?>
 

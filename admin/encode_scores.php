@@ -6,6 +6,13 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Check if user is logged in and is an admin
 if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true || $_SESSION["user_type"] !== "admin"){
+    // For AJAX requests, return JSON error
+    if (isset($_POST['update_single_score'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'error', 'message' => 'Unauthorized access']);
+        exit;
+    }
+    // For regular requests, redirect
     header("location: ../auth/login.php");
     exit;
 }
@@ -18,85 +25,148 @@ $page_title = "Encode Exam Scores - Student Admissions Management System";
 
 // Handle form submission
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    if (isset($_POST['update_score'])) {
+    if (isset($_POST['test_ajax'])) {
+        // Simple test endpoint
+        header('Content-Type: application/json');
+        echo json_encode(['status' => 'success', 'message' => 'AJAX is working']);
+        exit;
+    } elseif (isset($_POST['update_single_score'])) {
+        // Debug: Log the request
+        error_log("Single score update request received: " . print_r($_POST, true));
+        
         $applicant_id = trim($_POST['applicant_id']);
         $score = trim($_POST['score']);
         
-        // Validate inputs
-        if (empty($applicant_id) || !is_numeric($score) || $score < 0 || $score > 100) {
-            echo '<div class="alert alert-danger">Invalid score. Please enter a number between 0 and 100.</div>';
-        } else {
-            // Get user_id from applicant_id
-            $user_query = "SELECT user_id FROM applicants WHERE applicant_id = ?";
+        try {
+            // Validate inputs
+            if (empty($applicant_id) || !is_numeric($score) || $score < 0 || $score > 100) {
+                throw new Exception("Invalid score. Please enter a number between 0 and 100.");
+            }
+
+            // Debug: Log the values
+            error_log("Processing score update - Applicant ID: $applicant_id, Score: $score");
+
+            // Get applicant details
+            $user_query = "SELECT user_id, first_name, last_name FROM applicants WHERE applicant_id = ?";
             $user_stmt = $conn->prepare($user_query);
-            $user_stmt->bind_param("i", $applicant_id);
-            $user_stmt->execute();
-            $user_result = $user_stmt->get_result();
+            if (!$user_stmt) {
+                throw new Exception("Error preparing user query: " . $conn->error);
+            }
             
-            if ($user = $user_result->fetch_assoc()) {
-                $user_id = $user['user_id'];
+            $user_stmt->bind_param("i", $applicant_id);
+            if (!$user_stmt->execute()) {
+                throw new Exception("Error executing user query: " . $user_stmt->error);
+            }
+            
+            $user_result = $user_stmt->get_result();
+            if (!$user = $user_result->fetch_assoc()) {
+                throw new Exception("Applicant not found");
+            }
+            
+            $user_id = $user['user_id'];
+            $applicant_name = $user['first_name'] . ' ' . $user['last_name'];
+            
+            // Get the exam registration for this applicant
+            $reg_query = "SELECT reg.registration_id, reg.exam_schedule_id, es.exam_id
+                         FROM exam_registrations reg 
+                         JOIN exam_schedules es ON reg.exam_schedule_id = es.exam_id 
+                         WHERE reg.applicant_id = ? 
+                         ORDER BY reg.registration_date DESC LIMIT 1";
+            $reg_stmt = $conn->prepare($reg_query);
+            if (!$reg_stmt) {
+                throw new Exception("Error preparing registration query: " . $conn->error);
+            }
+            
+            $reg_stmt->bind_param("i", $applicant_id);
+            if (!$reg_stmt->execute()) {
+                throw new Exception("Error executing registration query: " . $reg_stmt->error);
+            }
+            
+            $reg_result = $reg_stmt->get_result();
+            if (!$registration = $reg_result->fetch_assoc()) {
+                throw new Exception("No exam registration found for this applicant");
+            }
+            
+            $registration_id = $registration['registration_id'];
+            $exam_id = $registration['exam_id'];
+            
+            // Check if score already exists for this registration
+            $check_query = "SELECT score_id FROM exam_scores WHERE registration_id = ?";
+            $check_stmt = $conn->prepare($check_query);
+            if (!$check_stmt) {
+                throw new Exception("Error preparing check query: " . $conn->error);
+            }
+            
+            $check_stmt->bind_param("i", $registration_id);
+            if (!$check_stmt->execute()) {
+                throw new Exception("Error executing check query: " . $check_stmt->error);
+            }
+            
+            $check_result = $check_stmt->get_result();
+            
+            if ($check_result->num_rows > 0) {
+                // Update existing score
+                $update_query = "UPDATE exam_scores SET 
+                    score = ?, 
+                    status = CASE 
+                        WHEN ? >= 75 THEN 'qualified' 
+                        ELSE 'not_qualified' 
+                    END,
+                    updated_at = NOW() 
+                    WHERE registration_id = ?";
+                $update_stmt = $conn->prepare($update_query);
+                if (!$update_stmt) {
+                    throw new Exception("Error preparing update query: " . $conn->error);
+                }
                 
-                // Check if exam result already exists
-                $check_query = "SELECT result_id FROM exam_results WHERE user_id = ?";
-                $check_stmt = $conn->prepare($check_query);
-                $check_stmt->bind_param("i", $user_id);
-                $check_stmt->execute();
-                $check_result = $check_stmt->get_result();
-                
-                if ($check_result->num_rows > 0) {
-                    // Update existing score
-                    $update_query = "UPDATE exam_results SET 
-                        score = ?, 
-                        status = CASE 
-                            WHEN ? >= 75 THEN 'passed' 
-                            ELSE 'failed' 
-                        END,
-                        updated_at = NOW() 
-                        WHERE user_id = ?";
-                    $update_stmt = $conn->prepare($update_query);
-                    $update_stmt->bind_param("ddi", $score, $score, $user_id);
-                    
-                    if ($update_stmt->execute()) {
-                        // Recalculate rankings after score update
-                        require_once "handlers/ranking_handler.php";
-                        recalculateRankings($conn);
-                        echo '<div class="alert alert-success">Score updated successfully.</div>';
-                    } else {
-                        echo '<div class="alert alert-danger">Error updating score: ' . $conn->error . '</div>';
-                    }
-                } else {
-                    // Insert new score
-                    $insert_query = "INSERT INTO exam_results (
-                        user_id, 
-                        score, 
-                        status, 
-                        created_at, 
-                        updated_at
-                    ) VALUES (
-                        ?, 
-                        ?, 
-                        CASE 
-                            WHEN ? >= 75 THEN 'passed' 
-                            ELSE 'failed' 
-                        END,
-                        NOW(), 
-                        NOW()
-                    )";
-                    $insert_stmt = $conn->prepare($insert_query);
-                    $insert_stmt->bind_param("idd", $user_id, $score, $score);
-                    
-                    if ($insert_stmt->execute()) {
-                        // Recalculate rankings after new score
-                        require_once "handlers/ranking_handler.php";
-                        recalculateRankings($conn);
-                        echo '<div class="alert alert-success">Score added successfully.</div>';
-                    } else {
-                        echo '<div class="alert alert-danger">Error adding score: ' . $conn->error . '</div>';
-                    }
+                $update_stmt->bind_param("ddi", $score, $score, $registration_id);
+                if (!$update_stmt->execute()) {
+                    throw new Exception("Error executing update query: " . $update_stmt->error);
                 }
             } else {
-                echo '<div class="alert alert-danger">Applicant not found.</div>';
+                // Insert new score
+                $insert_query = "INSERT INTO exam_scores (
+                    registration_id,
+                    score, 
+                    status
+                ) VALUES (
+                    ?,
+                    ?, 
+                    CASE 
+                        WHEN ? >= 75 THEN 'qualified' 
+                        ELSE 'not_qualified' 
+                    END
+                )";
+                $insert_stmt = $conn->prepare($insert_query);
+                if (!$insert_stmt) {
+                    throw new Exception("Error preparing insert query: " . $conn->error);
+                }
+                
+                $insert_stmt->bind_param("idd", $registration_id, $score, $score);
+                if (!$insert_stmt->execute()) {
+                    // Get more detailed error information
+                    $error_msg = $insert_stmt->error;
+                    $errno = $insert_stmt->errno;
+                    
+                    // Check if it's an auto-increment issue
+                    if ($errno == 1062) { // Duplicate entry error
+                        throw new Exception("Database error: Primary key auto-increment issue. Please check the exam_scores table structure. Error: " . $error_msg);
+                    } else {
+                        throw new Exception("Error executing insert query: " . $error_msg . " (Error Code: " . $errno . ")");
+                    }
+                }
             }
+            
+            // Return success response for AJAX
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'success', 'message' => 'Score updated successfully for ' . $applicant_name]);
+            exit;
+            
+        } catch (Exception $e) {
+            // Return error response for AJAX
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+            exit;
         }
     } elseif (isset($_POST['batch_update'])) {
         $scores = $_POST['scores'];
@@ -116,7 +186,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                     throw new Exception("Invalid score value: $score");
                 }
 
-                // Get user_id from applicant_id
+                // Get applicant details
                 $user_query = "SELECT user_id, first_name, last_name FROM applicants WHERE applicant_id = ?";
                 $user_stmt = $conn->prepare($user_query);
                 if (!$user_stmt) {
@@ -136,37 +206,41 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $user_id = $user['user_id'];
                 $applicant_name = $user['first_name'] . ' ' . $user['last_name'];
                 
-                // Get the current exam ID for this applicant
-                $exam_query = "SELECT es.exam_id 
+                // Get the exam registration for this applicant
+                $reg_query = "SELECT reg.registration_id, reg.exam_schedule_id, es.exam_id
                              FROM exam_registrations reg 
                              JOIN exam_schedules es ON reg.exam_schedule_id = es.exam_id 
-                             WHERE reg.applicant_id = ? AND es.status = 'completed' 
-                             ORDER BY es.exam_date DESC LIMIT 1";
-                $exam_stmt = $conn->prepare($exam_query);
-                if (!$exam_stmt) {
-                    throw new Exception("Error preparing exam query: " . $conn->error);
+                             WHERE reg.applicant_id = ? 
+                             ORDER BY reg.registration_date DESC LIMIT 1";
+                $reg_stmt = $conn->prepare($reg_query);
+                if (!$reg_stmt) {
+                    throw new Exception("Error preparing registration query: " . $conn->error);
                 }
                 
-                $exam_stmt->bind_param("i", $applicant_id);
-                if (!$exam_stmt->execute()) {
-                    throw new Exception("Error executing exam query: " . $exam_stmt->error);
+                $reg_stmt->bind_param("i", $applicant_id);
+                if (!$reg_stmt->execute()) {
+                    throw new Exception("Error executing registration query: " . $reg_stmt->error);
                 }
                 
-                $exam_result = $exam_stmt->get_result();
-                if (!$exam = $exam_result->fetch_assoc()) {
-                    throw new Exception("No completed exam found for this applicant");
+                $reg_result = $reg_stmt->get_result();
+                if (!$registration = $reg_result->fetch_assoc()) {
+                    throw new Exception("No exam registration found for this applicant");
                 }
                 
-                $current_exam_id = $exam['exam_id'];
+                $registration_id = $registration['registration_id'];
+                $exam_id = $registration['exam_id'];
                 
-                // Check if exam result already exists
-                $check_query = "SELECT result_id FROM exam_results WHERE user_id = ? AND exam_id = ?";
+                // Debug: Log the values for troubleshooting
+                error_log("Debug - Applicant ID: $applicant_id, Registration ID: $registration_id, Exam ID: $exam_id, Score: $score");
+                
+                // Check if score already exists for this registration
+                $check_query = "SELECT score_id FROM exam_scores WHERE registration_id = ?";
                 $check_stmt = $conn->prepare($check_query);
                 if (!$check_stmt) {
                     throw new Exception("Error preparing check query: " . $conn->error);
                 }
                 
-                $check_stmt->bind_param("ii", $user_id, $current_exam_id);
+                $check_stmt->bind_param("i", $registration_id);
                 if (!$check_stmt->execute()) {
                     throw new Exception("Error executing check query: " . $check_stmt->error);
                 }
@@ -175,51 +249,54 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 
                 if ($check_result->num_rows > 0) {
                     // Update existing score
-                    $update_query = "UPDATE exam_results SET 
+                    $update_query = "UPDATE exam_scores SET 
                         score = ?, 
                         status = CASE 
-                            WHEN ? >= 75 THEN 'passed' 
-                            ELSE 'failed' 
+                            WHEN ? >= 75 THEN 'qualified' 
+                            ELSE 'not_qualified' 
                         END,
                         updated_at = NOW() 
-                        WHERE user_id = ? AND exam_id = ?";
+                        WHERE registration_id = ?";
                     $update_stmt = $conn->prepare($update_query);
                     if (!$update_stmt) {
                         throw new Exception("Error preparing update query: " . $conn->error);
                     }
                     
-                    $update_stmt->bind_param("ddii", $score, $score, $user_id, $current_exam_id);
+                    $update_stmt->bind_param("ddi", $score, $score, $registration_id);
                     if (!$update_stmt->execute()) {
                         throw new Exception("Error executing update query: " . $update_stmt->error);
                     }
                 } else {
                     // Insert new score
-                    $insert_query = "INSERT INTO exam_results (
-                        user_id, 
-                        exam_id,
+                    $insert_query = "INSERT INTO exam_scores (
+                        registration_id,
                         score, 
-                        status, 
-                        created_at, 
-                        updated_at
+                        status
                     ) VALUES (
-                        ?, 
                         ?,
                         ?, 
                         CASE 
-                            WHEN ? >= 75 THEN 'passed' 
-                            ELSE 'failed' 
-                        END,
-                        NOW(), 
-                        NOW()
+                            WHEN ? >= 75 THEN 'qualified' 
+                            ELSE 'not_qualified' 
+                        END
                     )";
                     $insert_stmt = $conn->prepare($insert_query);
                     if (!$insert_stmt) {
                         throw new Exception("Error preparing insert query: " . $conn->error);
                     }
                     
-                    $insert_stmt->bind_param("iidd", $user_id, $current_exam_id, $score, $score);
+                    $insert_stmt->bind_param("idd", $registration_id, $score, $score);
                     if (!$insert_stmt->execute()) {
-                        throw new Exception("Error executing insert query: " . $insert_stmt->error);
+                        // Get more detailed error information
+                        $error_msg = $insert_stmt->error;
+                        $errno = $insert_stmt->errno;
+                        
+                        // Check if it's an auto-increment issue
+                        if ($errno == 1062) { // Duplicate entry error
+                            throw new Exception("Database error: Primary key auto-increment issue. Please check the exam_scores table structure. Error: " . $error_msg);
+                        } else {
+                            throw new Exception("Error executing insert query: " . $error_msg . " (Error Code: " . $errno . ")");
+                        }
                     }
                 }
                 
@@ -234,10 +311,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         
         if ($success_count > 0) {
-            // Recalculate rankings after batch update
-            require_once "handlers/ranking_handler.php";
-            recalculateRankings($conn);
-            
             $message = '<div class="alert alert-success">Successfully updated ' . $success_count . ' scores.';
             if ($error_count > 0) {
                 $message .= '<br>Failed to update ' . $error_count . ' scores:<br>';
@@ -270,21 +343,21 @@ $applicants_query = "
         a.last_name,
         p.program_name as primary_program,
         p.program_id,
-        er.score,
-        er.status,
-        es.exam_date,
-        er.exam_id,
-        es.exam_id as current_exam_id,
+        esc.score,
+        esc.status as score_status,
+        sch.exam_date,
+        reg.registration_id,
+        sch.exam_id,
         CASE 
-            WHEN er.score IS NULL THEN 'pending'
-            WHEN er.score >= 75 THEN 'passed'
-            ELSE 'failed'
+            WHEN esc.score IS NULL THEN 'pending'
+            WHEN esc.score >= 75 THEN 'qualified'
+            ELSE 'not_qualified'
         END as result_status
     FROM applicants a
     LEFT JOIN programs p ON a.primary_program_id = p.program_id
     LEFT JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
-    LEFT JOIN exam_schedules es ON reg.exam_schedule_id = es.exam_id AND es.status = 'completed'
-    LEFT JOIN exam_results er ON a.user_id = er.user_id AND er.exam_id = es.exam_id
+    LEFT JOIN exam_schedules sch ON reg.exam_schedule_id = sch.exam_id
+    LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
     WHERE 1=1
 ";
 
@@ -294,9 +367,9 @@ if ($program_filter) {
 
 if ($status_filter) {
     $applicants_query .= " AND CASE 
-        WHEN er.score IS NULL THEN 'pending'
-        WHEN er.score >= 75 THEN 'passed'
-        ELSE 'failed'
+        WHEN esc.score IS NULL THEN 'pending'
+        WHEN esc.score >= 75 THEN 'qualified'
+        ELSE 'not_qualified'
     END = '" . $status_filter . "'";
 }
 
@@ -316,13 +389,26 @@ $applicants = mysqli_query($conn, $applicants_query);
 // Get statistics
 $stats_query = "
     SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN er.score IS NULL THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN er.score >= 75 THEN 1 ELSE 0 END) as passed,
-        SUM(CASE WHEN er.score < 75 AND er.score IS NOT NULL THEN 1 ELSE 0 END) as failed
+        COUNT(DISTINCT a.applicant_id) as total,
+        SUM(CASE 
+            WHEN esc.score IS NULL THEN 1 
+            ELSE 0 
+        END) as pending,
+        SUM(CASE 
+            WHEN esc.score >= 75 THEN 1 
+            ELSE 0 
+        END) as qualified,
+        SUM(CASE 
+            WHEN esc.score < 75 AND esc.score IS NOT NULL THEN 1 
+            ELSE 0 
+        END) as not_qualified
     FROM applicants a
-    LEFT JOIN exam_results er ON a.user_id = er.user_id
+    LEFT JOIN programs p ON a.primary_program_id = p.program_id
+    LEFT JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
+    LEFT JOIN exam_schedules sch ON reg.exam_schedule_id = sch.exam_id
+    LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
     " . ($program_filter ? "WHERE a.primary_program_id = " . $program_filter : "");
+
 $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
 ?>
 
@@ -348,7 +434,7 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Applicants</div>
-                                    <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['total']; ?></div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo number_format($stats['total'] ?? 0); ?></div>
                                 </div>
                                 <div class="col-auto">
                                     <i class="fas fa-users fa-2x text-gray-300"></i>
@@ -364,7 +450,7 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
                                     <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending Scores</div>
-                                    <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['pending']; ?></div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo number_format($stats['pending'] ?? 0); ?></div>
                                 </div>
                                 <div class="col-auto">
                                     <i class="fas fa-clock fa-2x text-gray-300"></i>
@@ -379,8 +465,8 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                         <div class="card-body">
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
-                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Passed</div>
-                                    <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['passed']; ?></div>
+                                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Qualified</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo number_format($stats['qualified'] ?? 0); ?></div>
                                 </div>
                                 <div class="col-auto">
                                     <i class="fas fa-check-circle fa-2x text-gray-300"></i>
@@ -395,8 +481,8 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                         <div class="card-body">
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
-                                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Failed</div>
-                                    <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['failed']; ?></div>
+                                    <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Not Qualified</div>
+                                    <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo number_format($stats['not_qualified'] ?? 0); ?></div>
                                 </div>
                                 <div class="col-auto">
                                     <i class="fas fa-times-circle fa-2x text-gray-300"></i>
@@ -432,8 +518,8 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                             <select name="status" id="status" class="form-control" onchange="this.form.submit()">
                                 <option value="">All Status</option>
                                 <option value="pending" <?php echo $status_filter == 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                <option value="passed" <?php echo $status_filter == 'passed' ? 'selected' : ''; ?>>Passed</option>
-                                <option value="failed" <?php echo $status_filter == 'failed' ? 'selected' : ''; ?>>Failed</option>
+                                <option value="qualified" <?php echo $status_filter == 'qualified' ? 'selected' : ''; ?>>Qualified</option>
+                                <option value="not_qualified" <?php echo $status_filter == 'not_qualified' ? 'selected' : ''; ?>>Not Qualified</option>
                             </select>
                         </div>
                         <div class="col-md-4">
@@ -476,7 +562,7 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                                 <tbody>
                                     <?php while ($applicant = mysqli_fetch_assoc($applicants)): ?>
                                     <tr class="<?php echo $applicant['result_status'] == 'pending' ? 'table-warning' : 
-                                                    ($applicant['result_status'] == 'passed' ? 'table-success' : 'table-danger'); ?>">
+                                                    ($applicant['result_status'] == 'qualified' ? 'table-success' : 'table-danger'); ?>">
                                         <td>
                                             <?php 
                                             echo htmlspecialchars($applicant['last_name'] . ', ' . 
@@ -490,7 +576,7 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                                                 <input type="number" 
                                                        name="scores[<?php echo $applicant['applicant_id']; ?>]" 
                                                        class="form-control score-input" 
-                                                       value="<?php echo $applicant['score'] ?? ''; ?>"
+                                                       value="<?php echo isset($applicant['score']) ? number_format($applicant['score'], 2) : ''; ?>"
                                                        min="0"
                                                        max="100"
                                                        step="0.01"
@@ -498,9 +584,10 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                                                        onchange="updateStatus(this)">
                                                 <div class="input-group-append">
                                                     <button type="button" 
-                                                            class="btn btn-outline-secondary clear-score" 
-                                                            onclick="clearScore(this)">
-                                                        <i class="fas fa-times"></i>
+                                                            class="btn btn-success update-score" 
+                                                            onclick="updateSingleScore(this)"
+                                                            data-applicant-id="<?php echo $applicant['applicant_id']; ?>">
+                                                        <i class="fas fa-check"></i>
                                                     </button>
                                                 </div>
                                             </div>
@@ -508,7 +595,7 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                                         <td>
                                             <span class="badge bg-<?php 
                                                 echo $applicant['result_status'] == 'pending' ? 'warning' : 
-                                                    ($applicant['result_status'] == 'passed' ? 'success' : 'danger'); 
+                                                    ($applicant['result_status'] == 'qualified' ? 'success' : 'danger'); 
                                             ?>">
                                                 <?php echo ucfirst($applicant['result_status']); ?>
                                             </span>
@@ -536,7 +623,26 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
     </div>
 </div>
 
-<!-- Initialize DataTables -->
+<!-- Applicant Details Modal -->
+<div class="modal fade" id="applicantDetailsModal" tabindex="-1" role="dialog" aria-labelledby="applicantDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="applicantDetailsModalLabel">Applicant Details</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="modalApplicantDetails">
+        <!-- Details will be loaded here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 $(document).ready(function() {
     // Initialize DataTable with custom options
@@ -551,6 +657,42 @@ $(document).ready(function() {
             { targets: [2], orderable: false } // Disable sorting on score column
         ]
     });
+
+    // Test AJAX functionality
+    function testAjax() {
+        // First test simple file
+        $.ajax({
+            url: 'test_handler.php',
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                console.log('Simple test successful:', response);
+                // Now test the handler
+                testHandler();
+            },
+            error: function(xhr, status, error) {
+                console.error('Simple test failed:', xhr.responseText);
+            }
+        });
+    }
+    
+    function testHandler() {
+        $.ajax({
+            url: 'handlers/update_single_score.php',
+            type: 'POST',
+            data: { test_ajax: 1 },
+            dataType: 'json',
+            success: function(response) {
+                console.log('Handler test successful:', response);
+            },
+            error: function(xhr, status, error) {
+                console.error('Handler test failed:', xhr.responseText);
+            }
+        });
+    }
+    
+    // Run test on page load
+    testAjax();
 
     // Handle batch save
     $('#batchSaveBtn').click(function() {
@@ -572,28 +714,32 @@ $(document).ready(function() {
             var score = parseFloat(value);
             if (score >= 75) {
                 row.removeClass('table-warning table-danger').addClass('table-success');
-                row.find('.badge').removeClass('bg-warning bg-danger').addClass('bg-success').text('Passed');
+                row.find('.badge').removeClass('bg-warning bg-danger').addClass('bg-success').text('Qualified');
             } else {
                 row.removeClass('table-warning table-success').addClass('table-danger');
-                row.find('.badge').removeClass('bg-warning bg-success').addClass('bg-danger').text('Failed');
+                row.find('.badge').removeClass('bg-warning bg-success').addClass('bg-danger').text('Not Qualified');
             }
         }
-    });
-
-    // Handle clear score button
-    $('.clear-score').click(function() {
-        var input = $(this).closest('.input-group').find('input');
-        input.val('');
-        var row = $(this).closest('tr');
-        row.removeClass('table-success table-danger').addClass('table-warning');
-        row.find('.badge').removeClass('bg-success bg-danger').addClass('bg-warning').text('Pending');
     });
 
     // Handle view details button
     $('.view-details').click(function() {
         var applicantId = $(this).data('applicant-id');
-        // Implement view details functionality
-        // You can show a modal with more information about the applicant
+        // Load applicant details via AJAX
+        $.ajax({
+            url: '../handlers/applicant_details_handler.php',
+            type: 'GET',
+            data: { applicant_id: applicantId },
+            success: function(response) {
+                $('#modalApplicantDetails').html(response);
+                $('#applicantDetailsModal').modal('show');
+            },
+            error: function(xhr, status, error) {
+                console.error("Error loading applicant details: " + error);
+                $('#modalApplicantDetails').html('<div class="alert alert-danger">Error loading details. Please try again.</div>');
+                $('#applicantDetailsModal').modal('show');
+            }
+        });
     });
 });
 
@@ -612,19 +758,146 @@ function updateStatus(input) {
         if (score >= 75) {
             row.className = 'table-success';
             badge.className = 'badge bg-success';
-            badge.textContent = 'Passed';
+            badge.textContent = 'Qualified';
         } else {
             row.className = 'table-danger';
             badge.className = 'badge bg-danger';
-            badge.textContent = 'Failed';
+            badge.textContent = 'Not Qualified';
         }
     }
 }
 
-// Function to clear score
-function clearScore(button) {
+// Function to update single score
+function updateSingleScore(button) {
     var input = button.closest('.input-group').querySelector('input');
-    input.value = '';
-    updateStatus(input);
+    var applicantId = button.getAttribute('data-applicant-id');
+    var score = input.value;
+    
+    // Validate score
+    if (score === '' || isNaN(score) || score < 0 || score > 100) {
+        alert('Please enter a valid score between 0 and 100.');
+        return;
+    }
+    
+    // Disable button and show loading
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    
+    // Log the request data
+    console.log('Sending score update:', { applicant_id: applicantId, score: score });
+    
+    // Send AJAX request
+    $.ajax({
+        url: 'handlers/update_single_score.php',
+        type: 'POST',
+        data: {
+            update_single_score: 1,
+            applicant_id: applicantId,
+            score: score
+        },
+        dataType: 'json',
+        success: function(response) {
+            console.log('Response received:', response);
+            if (response.status === 'success') {
+                // Show success message
+                showAlert('success', response.message);
+                
+                // Update the status badge
+                updateStatus(input);
+                
+                // Update button appearance
+                button.innerHTML = '<i class="fas fa-check"></i>';
+                button.classList.remove('btn-success');
+                button.classList.add('btn-outline-success');
+                
+                // Re-enable button after a delay
+                setTimeout(function() {
+                    button.disabled = false;
+                    button.classList.remove('btn-outline-success');
+                    button.classList.add('btn-success');
+                }, 2000);
+                
+            } else {
+                showAlert('danger', response.message);
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-check"></i>';
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Handler failed, trying main file...');
+            // Fallback to main file
+            $.ajax({
+                url: 'encode_scores.php',
+                type: 'POST',
+                data: {
+                    update_single_score: 1,
+                    applicant_id: applicantId,
+                    score: score
+                },
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Main file response:', response);
+                    if (response.status === 'success') {
+                        showAlert('success', response.message);
+                        updateStatus(input);
+                        button.innerHTML = '<i class="fas fa-check"></i>';
+                        button.classList.remove('btn-success');
+                        button.classList.add('btn-outline-success');
+                        setTimeout(function() {
+                            button.disabled = false;
+                            button.classList.remove('btn-outline-success');
+                            button.classList.add('btn-success');
+                        }, 2000);
+                    } else {
+                        showAlert('danger', response.message);
+                        button.disabled = false;
+                        button.innerHTML = '<i class="fas fa-check"></i>';
+                    }
+                },
+                error: function(xhr2, status2, error2) {
+                    console.error('AJAX Error Details:');
+                    console.error('Status:', status2);
+                    console.error('Error:', error2);
+                    console.error('Response Text:', xhr2.responseText);
+                    console.error('Status Code:', xhr2.status);
+                    
+                    var errorMessage = 'Error updating score. Please try again.';
+                    if (xhr2.responseText) {
+                        try {
+                            var response = JSON.parse(xhr2.responseText);
+                            errorMessage = response.message || errorMessage;
+                        } catch (e) {
+                            errorMessage += ' Server response: ' + xhr2.responseText.substring(0, 100);
+                        }
+                    }
+                    
+                    showAlert('danger', errorMessage);
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-check"></i>';
+                }
+            });
+        }
+    });
+}
+
+// Function to show alerts
+function showAlert(type, message) {
+    var alertHtml = '<div class="alert alert-' + type + ' alert-dismissible fade show" role="alert">' +
+                    message +
+                    '<button type="button" class="close" data-dismiss="alert" aria-label="Close">' +
+                    '<span aria-hidden="true">&times;</span>' +
+                    '</button>' +
+                    '</div>';
+    
+    // Remove existing alerts
+    $('.alert').remove();
+    
+    // Add new alert at the top of the main content
+    $('main').prepend(alertHtml);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(function() {
+        $('.alert').fadeOut();
+    }, 5000);
 }
 </script> 

@@ -18,47 +18,28 @@ $page_title = "Program Cutoffs - Student Admissions Management System";
 
 // Handle program cutoff updates
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Debug: Log the POST data
-    error_log("POST data: " . print_r($_POST, true));
-    
     if (isset($_POST['update_cutoff'])) {
-        // Debug: Log specific fields
-        error_log("program_id exists: " . (isset($_POST['program_id']) ? 'yes' : 'no'));
-        error_log("cutoff_rank exists: " . (isset($_POST['cutoff_rank']) ? 'yes' : 'no'));
-        
-        // Check if both required fields exist
-        if (!isset($_POST['program_id']) || !isset($_POST['cutoff_rank'])) {
-            echo '<div class="alert alert-danger">Missing required fields. POST data: ' . htmlspecialchars(print_r($_POST, true)) . '</div>';
+        if (!isset($_POST['program_id']) || !isset($_POST['start_rank']) || !isset($_POST['end_rank'])) {
+            echo '<div class="alert alert-danger">Missing required fields.</div>';
         } else {
             $program_id = trim($_POST['program_id']);
-            $cutoff_rank = trim($_POST['cutoff_rank']);
-            
-            // Debug: Log the values
-            error_log("program_id value: " . $program_id);
-            error_log("cutoff_rank value: " . $cutoff_rank);
-            
-            // Validate inputs
-            if (empty($program_id) || empty($cutoff_rank)) {
-                echo '<div class="alert alert-danger">Program ID and cutoff rank are required.</div>';
+            $start_rank = trim($_POST['start_rank']);
+            $end_rank = trim($_POST['end_rank']);
+            if (empty($program_id) || empty($start_rank) || empty($end_rank)) {
+                echo '<div class="alert alert-danger">All fields are required.</div>';
             } else {
-                // Check if cutoff exists
                 $check_stmt = $conn->prepare("SELECT cutoff_id FROM program_cutoffs WHERE program_id = ?");
                 $check_stmt->bind_param("i", $program_id);
                 $check_stmt->execute();
                 $result = $check_stmt->get_result();
-                
                 if ($result->num_rows > 0) {
-                    // Update existing cutoff
-                    $stmt = $conn->prepare("UPDATE program_cutoffs SET cutoff_rank = ? WHERE program_id = ?");
-                    $stmt->bind_param("ii", $cutoff_rank, $program_id);
+                    $stmt = $conn->prepare("UPDATE program_cutoffs SET start_rank = ?, end_rank = ? WHERE program_id = ?");
+                    $stmt->bind_param("iii", $start_rank, $end_rank, $program_id);
                 } else {
-                    // Insert new cutoff
-                    $stmt = $conn->prepare("INSERT INTO program_cutoffs (program_id, cutoff_rank) VALUES (?, ?)");
-                    $stmt->bind_param("ii", $program_id, $cutoff_rank);
+                    $stmt = $conn->prepare("INSERT INTO program_cutoffs (program_id, start_rank, end_rank) VALUES (?, ?, ?)");
+                    $stmt->bind_param("iii", $program_id, $start_rank, $end_rank);
                 }
-                
                 if ($stmt->execute()) {
-                    // Recalculate rankings
                     require_once "handlers/ranking_handler.php";
                     recalculateRankings($conn);
                     echo '<div class="alert alert-success">Cutoff updated and rankings recalculated successfully.</div>';
@@ -75,7 +56,8 @@ $programs_query = "
     SELECT 
         p.program_id,
         p.program_name,
-        pc.cutoff_rank,
+        pc.start_rank,
+        pc.end_rank,
         pc.is_active
     FROM programs p
     LEFT JOIN program_cutoffs pc ON p.program_id = pc.program_id
@@ -104,7 +86,8 @@ $programs = mysqli_query($conn, $programs_query);
                             <thead>
                                 <tr>
                                     <th>Program</th>
-                                    <th>Cutoff Rank</th>
+                                    <th>Start Rank</th>
+                                    <th>End Rank</th>
                                     <th>Status</th>
                                     <th>Action</th>
                                 </tr>
@@ -116,33 +99,18 @@ $programs = mysqli_query($conn, $programs_query);
                                     <td>
                                         <form method="POST" class="d-inline">
                                             <input type="hidden" name="program_id" value="<?php echo $program['program_id']; ?>">
-                                            <div class="input-group">
-                                                <input type="number" 
-                                                       name="cutoff_rank" 
-                                                       class="form-control" 
-                                                       value="<?php echo $program['cutoff_rank'] ?? ''; ?>"
-                                                       min="1"
-                                                       required>
-                                                <div class="input-group-append">
-                                                    <button type="submit" 
-                                                            name="update_cutoff" 
-                                                            class="btn btn-primary">
-                                                        Update
-                                                    </button>
-                                                </div>
-                                            </div>
+                                            <input type="number" name="start_rank" class="form-control" value="<?php echo $program['start_rank'] ?? ''; ?>" min="1" required placeholder="Start Rank">
+                                    </td>
+                                    <td>
+                                            <input type="number" name="end_rank" class="form-control" value="<?php echo $program['end_rank'] ?? ''; ?>" min="1" required placeholder="End Rank">
+                                    </td>
+                                    <td>
+                                        <?php echo $program['is_active'] ? '<span class="badge bg-success">Active</span>' : '<span class="badge bg-danger">Inactive</span>'; ?>
+                                    </td>
+                                    <td>
+                                            <button type="submit" name="update_cutoff" class="btn btn-primary">Update</button>
                                         </form>
-                                    </td>
-                                    <td>
-                                        <?php echo $program['is_active'] ? 
-                                            '<span class="badge bg-success">Active</span>' : 
-                                            '<span class="badge bg-danger">Inactive</span>'; ?>
-                                    </td>
-                                    <td>
-                                        <a href="index.php?page=student_rankings&program_id=<?php echo $program['program_id']; ?>" 
-                                           class="btn btn-info btn-sm">
-                                            View Rankings
-                                        </a>
+                                        <a href="index.php?page=student_rankings&program_id=<?php echo $program['program_id']; ?>" class="btn btn-info btn-sm mt-2">View Rankings</a>
                                     </td>
                                 </tr>
                                 <?php endwhile; ?>

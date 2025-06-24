@@ -35,12 +35,14 @@ $interview_query = "
     SELECT 
         i.*,
         p.program_name,
-        CONCAT(u.first_name, ' ', u.last_name) as interviewer_name
+        CONCAT(u.first_name, ' ', u.last_name) as interviewer_name,
+        s.time_window
     FROM interviews i
     JOIN applications a ON i.application_id = a.application_id
     JOIN programs p ON a.program_id = p.program_id
     JOIN program_heads ph ON i.program_head_id = ph.program_head_id
     JOIN users u ON ph.user_id = u.user_id
+    JOIN interview_schedules s ON s.interview_date = i.scheduled_date AND s.program_id = p.program_id
     WHERE a.user_id = ?
     ORDER BY i.scheduled_date DESC, i.scheduled_time DESC
     LIMIT 1
@@ -61,13 +63,14 @@ $exam_registration_query = "
         er.*,
         es.exam_date,
         es.exam_time,
+        es.venue,
         es.status as schedule_status,
-        exr.score,
-        exr.status as result_status
+        esc.score,
+        esc.status as result_status
     FROM exam_registrations er
     LEFT JOIN exam_schedules es ON er.exam_schedule_id = es.exam_id
     LEFT JOIN applicants a ON er.applicant_id = a.applicant_id
-    LEFT JOIN exam_results exr ON er.exam_schedule_id = exr.exam_id AND a.user_id = exr.user_id
+    LEFT JOIN exam_scores esc ON er.registration_id = esc.registration_id
     WHERE a.user_id = ?
     ORDER BY er.registration_date DESC
     LIMIT 1
@@ -185,7 +188,7 @@ if ($stmt = mysqli_prepare($conn, $exam_registration_query)) {
                                 </tr>
                                 <tr>
                                     <th>Time</th>
-                                    <td><?php echo date('h:i A', strtotime($interview['scheduled_time'])); ?></td>
+                                    <td><?php echo $interview['time_window']; ?></td>
                                 </tr>
                                 <tr>
                                     <th>Status</th>
@@ -251,15 +254,14 @@ if ($stmt = mysqli_prepare($conn, $exam_registration_query)) {
                             <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
                                 Exam Result</div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                <?php 
-                                if ($exam_registration['result_status'] === 'passed') {
-                                    echo '<span class="text-success">Passed (' . number_format($exam_registration['score'], 2) . '%)</span>';
-                                } elseif ($exam_registration['result_status'] === 'failed') {
-                                    echo '<span class="text-danger">Failed (' . number_format($exam_registration['score'], 2) . '%)</span>';
-                                } else {
-                                    echo ucfirst($exam_registration['status']);
-                                }
-                                ?>
+                                <?php echo number_format($exam_registration['score'], 2); ?>%
+                            </div>
+                            <div class="text-sm text-gray-800 mt-0">
+                                <?php echo date('F d, Y', strtotime($exam_registration['exam_date'])); ?> at 
+                                <?php echo date('h:i A', strtotime($exam_registration['exam_time'])); ?>
+                            </div>
+                            <div class="text-lg text-gray-800 mt-0">
+                                Venue: <?php echo htmlspecialchars($exam_registration['venue']); ?>
                             </div>
                         <?php else: ?>
                             <!-- Has Registration but No Result -->
@@ -267,6 +269,13 @@ if ($stmt = mysqli_prepare($conn, $exam_registration_query)) {
                                 Exam Registration</div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
                                 <?php echo ucfirst($exam_registration['status']); ?>
+                            </div>
+                            <div class="text-lg text-gray-800 mt-0">
+                                <?php echo date('F d, Y', strtotime($exam_registration['exam_date'])); ?> at 
+                                <?php echo date('h:i A', strtotime($exam_registration['exam_time'])); ?>
+                            </div>
+                            <div class="text-sm text-gray-800 mt-0">
+                                Venue: <?php echo htmlspecialchars($exam_registration['venue']); ?>
                             </div>
                         <?php endif; ?>
                     </div>

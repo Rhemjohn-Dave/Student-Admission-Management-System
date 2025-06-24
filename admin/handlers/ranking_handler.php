@@ -4,38 +4,42 @@ function recalculateRankings($conn) {
     // Clear existing rankings
     $conn->query("TRUNCATE TABLE program_rankings");
     
-    // Get all programs
-    $programs = $conn->query("SELECT program_id FROM programs");
+    // Get all applicants with scores and their global rank
+    $global_rank_query = "
+        SELECT a.applicant_id, esc.score,
+            RANK() OVER (ORDER BY esc.score DESC) as global_rank
+        FROM applicants a
+        JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
+        JOIN exam_scores esc ON reg.registration_id = esc.registration_id
+    ";
+    $global_ranks = $conn->query($global_rank_query);
+    $applicant_ranks = [];
+    while ($row = $global_ranks->fetch_assoc()) {
+        $applicant_ranks[$row['applicant_id']] = [
+            'score' => $row['score'],
+            'global_rank' => $row['global_rank']
+        ];
+    }
     
+    // Get all programs and their cutoff ranges
+    $programs = $conn->query("SELECT program_id, start_rank, end_rank FROM program_cutoffs WHERE is_active = 1");
     while ($program = $programs->fetch_assoc()) {
         $program_id = $program['program_id'];
+        $start_rank = $program['start_rank'];
+        $end_rank = $program['end_rank'];
         
-        // Get cutoff rank for this program
-        $cutoff_query = "SELECT cutoff_rank FROM program_cutoffs WHERE program_id = ? AND is_active = 1";
-        $cutoff_stmt = $conn->prepare($cutoff_query);
-        $cutoff_stmt->bind_param("i", $program_id);
-        $cutoff_stmt->execute();
-        $cutoff_result = $cutoff_stmt->get_result();
-        $cutoff_rank = $cutoff_result->fetch_assoc()['cutoff_rank'] ?? PHP_INT_MAX;
-        
-        // Get all applicants with exam scores for this program
-        $rank_query = "
-            INSERT INTO program_rankings (applicant_id, program_id, exam_score, rank_position, is_eligible)
-            SELECT 
-                a.applicant_id,
-                ?,
-                er.score,
-                RANK() OVER (ORDER BY er.score DESC),
-                CASE WHEN RANK() OVER (ORDER BY er.score DESC) <= ? THEN TRUE ELSE FALSE END
-            FROM applicants a
-            JOIN exam_results er ON a.user_id = er.user_id
-            WHERE a.primary_program_id = ? OR a.secondary_program_id = ?
-            AND er.score IS NOT NULL
-        ";
-        
-        $rank_stmt = $conn->prepare($rank_query);
-        $rank_stmt->bind_param("iiii", $program_id, $cutoff_rank, $program_id, $program_id);
-        $rank_stmt->execute();
+        // For each applicant, check if their global rank falls within the program's range
+        foreach ($applicant_ranks as $applicant_id => $data) {
+            $score = $data['score'];
+            $global_rank = $data['global_rank'];
+            $is_eligible = ($global_rank >= $start_rank && $global_rank <= $end_rank) ? 1 : 0;
+            if ($is_eligible) {
+                // Insert into program_rankings
+                $stmt = $conn->prepare("INSERT INTO program_rankings (applicant_id, program_id, exam_score, rank_position, is_eligible) VALUES (?, ?, ?, ?, ?)");
+                $stmt->bind_param("iidii", $applicant_id, $program_id, $score, $global_rank, $is_eligible);
+                $stmt->execute();
+            }
+        }
     }
     
     // Assign programs based on rankings

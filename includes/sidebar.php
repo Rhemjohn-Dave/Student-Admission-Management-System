@@ -115,14 +115,6 @@
             </a>
         </li>
 
-        <!-- Nav Item - Applications -->
-        <li class="nav-item <?php echo (isset($_GET['page']) && $_GET['page'] == 'approve_applications') ? 'active' : ''; ?>">
-            <a class="nav-link" href="index.php?page=approve_applications">
-                <i class="fas fa-fw fa-calendar-alt"></i>
-                <span>Applications</span>
-            </a>
-        </li>
-
         <!-- Nav Item - Reports -->
         <li class="nav-item <?php echo (isset($_GET['page']) && $_GET['page'] == 'reports') ? 'active' : ''; ?>">
             <a class="nav-link" href="index.php?page=reports">

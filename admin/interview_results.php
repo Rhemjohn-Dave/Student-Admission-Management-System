@@ -28,60 +28,57 @@ if (!$programs) {
 
 // Build the interview results query
 $results_query = "
-    SELECT 
-        a.applicant_id,
-        a.first_name,
-        a.middle_name,
-        a.last_name,
-        p.program_name,
-        p1.program_name as primary_program,
-        p2.program_name as secondary_program,
-        er.score as exam_score,
-        i.score as interview_score,
-        i.status as interview_status,
-        i.scheduled_date,
-        i.scheduled_time,
-        i.interviewer_id,
-        CONCAT(u2.first_name, ' ', u2.last_name) as interviewer_name,
-        ROUND(
-            (COALESCE(er.score, 0) * 0.75) + 
-            ((COALESCE(i.score, 0) / 25 * 100) * 0.25), 
-            2
-        ) as combined_score,
-        RANK() OVER (
-            PARTITION BY p.program_id 
-            ORDER BY 
-                (COALESCE(er.score, 0) * 0.75) + 
-                ((COALESCE(i.score, 0) / 25 * 100) * 0.25) DESC
-        ) as program_rank,
-        pc.cutoff_rank,
-        CASE 
-            WHEN RANK() OVER (
+    SELECT *,
+        CASE WHEN program_rank >= start_rank AND program_rank <= end_rank THEN 1 ELSE 0 END as is_eligible
+    FROM (
+        SELECT 
+            a.applicant_id,
+            a.first_name,
+            a.middle_name,
+            a.last_name,
+            p.program_id,
+            p.program_name,
+            p1.program_name as primary_program,
+            p2.program_name as secondary_program,
+            esc.score as exam_score,
+            i.score as interview_score,
+            i.status as interview_status,
+            i.scheduled_date,
+            i.scheduled_time,
+            CONCAT(u2.first_name, ' ', u2.last_name) as interviewer_name,
+            ROUND(
+                (COALESCE(esc.score, 0) * 0.75) + 
+                ((COALESCE(i.score, 0) / 25 * 100) * 0.25), 
+                2
+            ) as combined_score,
+            RANK() OVER (
                 PARTITION BY p.program_id 
                 ORDER BY 
-                    (COALESCE(er.score, 0) * 0.75) + 
+                    (COALESCE(esc.score, 0) * 0.75) + 
                     ((COALESCE(i.score, 0) / 25 * 100) * 0.25) DESC
-            ) <= COALESCE(pc.cutoff_rank, 999999) THEN 1
-            ELSE 0
-        END as is_eligible
-    FROM applicants a
-    JOIN users u ON a.user_id = u.user_id
-    JOIN programs p ON a.primary_program_id = p.program_id
-    LEFT JOIN programs p1 ON a.primary_program_id = p1.program_id
-    LEFT JOIN programs p2 ON a.secondary_program_id = p2.program_id
-    LEFT JOIN exam_results er ON u.user_id = er.user_id
-    LEFT JOIN applications app ON a.user_id = app.user_id
-    LEFT JOIN interviews i ON app.application_id = i.application_id
-    LEFT JOIN users u2 ON i.interviewer_id = u2.user_id
-    LEFT JOIN program_cutoffs pc ON p.program_id = pc.program_id
-    WHERE (i.status = 'completed' OR i.status IS NULL)
+            ) as program_rank,
+            pc.start_rank, pc.end_rank
+        FROM applicants a
+        JOIN users u ON a.user_id = u.user_id
+        JOIN programs p ON a.primary_program_id = p.program_id
+        LEFT JOIN programs p1 ON a.primary_program_id = p1.program_id
+        LEFT JOIN programs p2 ON a.secondary_program_id = p2.program_id
+        LEFT JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
+        LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
+        LEFT JOIN applications app ON a.user_id = app.user_id
+        LEFT JOIN interviews i ON app.application_id = i.application_id
+        LEFT JOIN program_heads ph ON p.program_id = ph.program_id
+        LEFT JOIN users u2 ON ph.user_id = u2.user_id
+        LEFT JOIN program_cutoffs pc ON p.program_id = pc.program_id
+        WHERE (i.status = 'completed' OR i.status IS NULL)
+    ) ranked
 ";
 
 if ($program_filter) {
-    $results_query .= " AND p.program_id = " . intval($program_filter);
+    $results_query .= " WHERE ranked.program_id = " . intval($program_filter);
 }
 
-$results_query .= " ORDER BY p.program_name, program_rank";
+$results_query .= " ORDER BY ranked.program_name, ranked.program_rank";
 
 // Execute the query with error handling
 $results = mysqli_query($conn, $results_query);
@@ -226,25 +223,16 @@ $stats = mysqli_fetch_assoc($stats_result);
                         <table class="table table-bordered" id="interviewResultsTable">
                             <thead>
                                 <tr>
-                                    <th>Program</th>
-                                    <th>Program Rank</th>
                                     <th>Student Name</th>
-                                    <th>Primary Program</th>
-                                    <th>Secondary Program</th>
-                                    <th>Exam Score (75%)</th>
-                                    <th>Interview Score (25%)</th>
-                                    <th>Combined Score</th>
+                                    <th>Interview Score</th>
                                     <th>Interview Date</th>
                                     <th>Interviewer</th>
                                     <th>Status</th>
-                                    <th>Cutoff Rank</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php while ($result = mysqli_fetch_assoc($results)): ?>
                                 <tr class="<?php echo $result['is_eligible'] ? 'table-success' : ''; ?>">
-                                    <td><?php echo htmlspecialchars($result['program_name']); ?></td>
-                                    <td><?php echo $result['program_rank']; ?></td>
                                     <td>
                                         <?php 
                                         echo htmlspecialchars($result['last_name'] . ', ' . 
@@ -252,11 +240,7 @@ $stats = mysqli_fetch_assoc($stats_result);
                                             ($result['middle_name'] ? ' ' . $result['middle_name'] : '')); 
                                         ?>
                                     </td>
-                                    <td><?php echo htmlspecialchars($result['primary_program']); ?></td>
-                                    <td><?php echo htmlspecialchars($result['secondary_program'] ?? 'N/A'); ?></td>
-                                    <td><?php echo number_format($result['exam_score'], 2); ?></td>
                                     <td><?php echo $result['interview_score'] ? number_format(($result['interview_score'] / 25 * 100), 2) : 'N/A'; ?></td>
-                                    <td><?php echo number_format($result['combined_score'], 2); ?></td>
                                     <td>
                                         <?php 
                                         if ($result['scheduled_date']) {
@@ -275,7 +259,6 @@ $stats = mysqli_fetch_assoc($stats_result);
                                             <span class="badge bg-danger">Not Eligible</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td><?php echo $result['cutoff_rank'] ?? 'Not Set'; ?></td>
                                 </tr>
                                 <?php endwhile; ?>
                             </tbody>

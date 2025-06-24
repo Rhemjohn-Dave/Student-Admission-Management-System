@@ -603,3 +603,303 @@ POST data: Array
     [schedule_id] => 2
 )
 
+
+
+2025-06-10 10:25:24 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 9
+)
+
+
+
+2025-06-10 10:25:39 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 9
+)
+
+
+
+2025-06-10 10:25:48 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 9
+)
+
+
+
+2025-06-10 10:26:00 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 10
+)
+
+
+
+2025-06-11 01:44:33 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 1
+)
+
+
+
+2025-06-11 01:45:23 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 10
+)
+
+
+
+2025-06-11 02:07:58 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 9
+)
+
+
+
+2025-06-11 02:08:54 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 9
+)
+
+
+
+2025-06-11 02:10:29 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 9
+)
+
+
+
+2025-06-11 02:11:01 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 12
+)
+
+
+
+2025-06-11 02:11:20 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 11
+)
+
+
+
+2025-06-11 02:13:12 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-06-30
+    [time] => 08:00
+    [venue] => TUP Visayas
+    [max_participants] => 100
+)
+
+Received data for new schedule:
+exam_date: 2025-06-30
+exam_time: 08:00
+venue: TUP Visayas
+max_participants: 100
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 13
+
+
+2025-06-11 03:55:07 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 13
+)
+
+
+
+2025-06-11 03:55:23 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 13
+)
+
+
+
+2025-06-11 03:56:57 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 13
+)
+
+
+
+2025-06-11 03:58:09 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 13
+)
+
+
+
+2025-06-11 03:58:51 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 13
+)
+
+
+
+2025-06-11 04:00:23 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 13
+)
+
+Checking schedule ID: 13
+Schedule found: Array
+(
+    [exam_id] => 13
+    [exam_date] => 2025-06-30
+    [exam_time] => 08:00:00
+    [venue] => TUP Visayas
+    [max_participants] => 100
+    [status] => scheduled
+    [created_at] => 2025-06-11 08:13:12
+    [updated_at] => 2025-06-11 08:13:12
+)
+
+Registration count: Array
+(
+    [registered_count] => 0
+)
+
+No registered applicants found for schedule ID: 13
+
+
+2025-06-11 04:01:24 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 13
+)
+
+Checking schedule ID: 13
+Schedule found: Array
+(
+    [exam_id] => 13
+    [exam_date] => 2025-06-30
+    [exam_time] => 08:00:00
+    [venue] => TUP Visayas
+    [max_participants] => 100
+    [status] => scheduled
+    [created_at] => 2025-06-11 08:13:12
+    [updated_at] => 2025-06-11 08:13:12
+)
+
+Registration count: Array
+(
+    [registered_count] => 1
+)
+
+
+
+2025-06-11 04:02:39 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 13
+)
+
+Checking schedule ID: 13
+Schedule found: Array
+(
+    [exam_id] => 13
+    [exam_date] => 2025-06-30
+    [exam_time] => 08:00:00
+    [venue] => TUP Visayas
+    [max_participants] => 100
+    [status] => scheduled
+    [created_at] => 2025-06-11 08:13:12
+    [updated_at] => 2025-06-11 10:02:32
+)
+
+Registration count: Array
+(
+    [registered_count] => 1
+)
+
+
+
+2025-06-12 05:44:13 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-06-16
+    [time] => 08:00
+    [venue] => TUP Visayas Gymnasium
+    [max_participants] => 150
+)
+
+Received data for new schedule:
+exam_date: 2025-06-16
+exam_time: 08:00
+venue: TUP Visayas Gymnasium
+max_participants: 150
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 0
+
+
+2025-06-18 08:25:56 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 0
+)
+
+
+
+2025-06-18 08:27:27 - New request started
+POST data: Array
+(
+    [action] => complete_schedule
+    [schedule_id] => 5
+)
+
+Checking schedule ID: 5
+Schedule found: Array
+(
+    [exam_id] => 5
+    [exam_date] => 2025-06-16
+    [exam_time] => 08:00:00
+    [venue] => TUP Visayas Gymnasium
+    [max_participants] => 150
+    [status] => scheduled
+    [created_at] => 2025-06-12 11:44:13
+    [updated_at] => 2025-06-18 14:27:02
+)
+
+Registration count: Array
+(
+    [registered_count] => 1
+)
+

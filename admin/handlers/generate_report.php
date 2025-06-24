@@ -263,23 +263,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             // Build the rankings query based on type
             if ($ranking_type === 'overall') {
                 $rankings_query = "
-                    SELECT 
-                        a.applicant_id,
-                        a.first_name,
-                        a.middle_name,
-                        a.last_name,
-                        p1.program_name as primary_program,
-                        p2.program_name as secondary_program,
-                        er.score as exam_score,
-                        RANK() OVER (ORDER BY er.score DESC) as overall_rank
-                    FROM applicants a
-                    JOIN users u ON a.user_id = u.user_id
-                    JOIN programs p1 ON a.primary_program_id = p1.program_id
-                    LEFT JOIN programs p2 ON a.secondary_program_id = p2.program_id
-                    LEFT JOIN exam_results er ON u.user_id = er.user_id
-                    WHERE er.score IS NOT NULL
-                    " . ($program_id ? "AND (a.primary_program_id = $program_id OR a.secondary_program_id = $program_id)" : "") . "
-                    ORDER BY overall_rank
+                    SELECT * FROM (
+                        SELECT 
+                            a.applicant_id,
+                            a.first_name,
+                            a.middle_name,
+                            a.last_name,
+                            p1.program_name as primary_program,
+                            p2.program_name as secondary_program,
+                            esc.score as exam_score,
+                            RANK() OVER (ORDER BY esc.score DESC) as overall_rank
+                        FROM applicants a
+                        JOIN users u ON a.user_id = u.user_id
+                        JOIN programs p1 ON a.primary_program_id = p1.program_id
+                        LEFT JOIN programs p2 ON a.secondary_program_id = p2.program_id
+                        LEFT JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
+                        LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
+                        WHERE esc.score IS NOT NULL
+                        " . ($program_id ? "AND (a.primary_program_id = $program_id OR a.secondary_program_id = $program_id)" : "") . "
+                    ) ranked
+                    ORDER BY ranked.overall_rank
                 ";
             } else {
                 $rankings_query = "
@@ -296,12 +299,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             PARTITION BY p.program_id 
                             ORDER BY er.score DESC
                         ) as program_rank,
-                        pc.cutoff_rank,
+                        pc.start_rank,
+                        pc.end_rank,
                         CASE 
-                            WHEN RANK() OVER (
-                                PARTITION BY p.program_id 
-                                ORDER BY er.score DESC
-                            ) <= COALESCE(pc.cutoff_rank, 999999) THEN 'Eligible'
+                            WHEN program_rank >= pc.start_rank AND program_rank <= pc.end_rank THEN 'Eligible'
                             ELSE 'Not Eligible'
                         END as status
                     FROM applicants a
@@ -503,7 +504,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 <td class="<?php echo $ranking['status'] === 'Eligible' ? 'status-eligible' : 'status-not-eligible'; ?>">
                                     <?php echo $ranking['status']; ?>
                                 </td>
-                                <td><?php echo $ranking['cutoff_rank'] ?? 'N/A'; ?></td>
+                                <td><?php echo isset($ranking['start_rank'], $ranking['end_rank']) ? $ranking['start_rank'] . '–' . $ranking['end_rank'] : 'N/A'; ?></td>
                             <?php endif; ?>
                         </tr>
                         <?php endforeach; ?>
@@ -822,53 +823,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 if ($program) {
                     // Get final rankings with both exam and interview scores
                     $rankings_query = "
-                        SELECT 
-                            a.applicant_id,
-                            a.first_name,
-                            a.middle_name,
-                            a.last_name,
-                            a.gender,
-                            p.program_name,
-                            er.score as exam_score,
-                            i.score as interview_score,
-                            ROUND(
-                                (COALESCE(er.score, 0) * 0.75) + 
-                                ((COALESCE(i.score, 0) / 25 * 100) * 0.25), 
-                                2
-                            ) as final_score,
-                            RANK() OVER (
-                                ORDER BY (
-                                    (COALESCE(er.score, 0) * 0.75) + 
-                                    ((COALESCE(i.score, 0) / 25 * 100) * 0.25)
-                                ) DESC
-                            ) as overall_rank,
-                            CASE 
-                                WHEN i.result = 'passed' THEN 'Passed'
-                                WHEN i.result = 'failed' THEN 'Failed'
-                                ELSE 'Pending'
-                            END as interview_result,
-                            pc.cutoff_rank,
-                            CASE 
-                                WHEN RANK() OVER (
+                        SELECT * FROM (
+                            SELECT 
+                                a.applicant_id,
+                                a.first_name,
+                                a.middle_name,
+                                a.last_name,
+                                a.gender,
+                                p.program_name,
+                                esc.score as exam_score,
+                                i.score as interview_score,
+                                ROUND(
+                                    (COALESCE(esc.score, 0) * 0.75) + 
+                                    ((COALESCE(i.score, 0) / 25 * 100) * 0.25), 
+                                    2
+                                ) as final_score,
+                                RANK() OVER (
                                     ORDER BY (
-                                        (COALESCE(er.score, 0) * 0.75) + 
+                                        (COALESCE(esc.score, 0) * 0.75) + 
                                         ((COALESCE(i.score, 0) / 25 * 100) * 0.25)
                                     ) DESC
-                                ) <= COALESCE(pc.cutoff_rank, 999999) 
-                                AND i.result = 'passed' 
-                                THEN 'Qualified'
-                                ELSE 'Not Qualified'
-                            END as final_status
-                        FROM applicants a
-                        JOIN users u ON a.user_id = u.user_id
-                        JOIN programs p ON a.primary_program_id = p.program_id
-                        LEFT JOIN exam_results er ON u.user_id = er.user_id
-                        LEFT JOIN applications app ON a.user_id = app.user_id
-                        LEFT JOIN interviews i ON app.application_id = i.application_id
-                        LEFT JOIN program_cutoffs pc ON p.program_id = pc.program_id
-                        WHERE p.program_id = ?
-                        AND er.score IS NOT NULL
-                        ORDER BY final_score DESC, overall_rank ASC
+                                ) as overall_rank,
+                                CASE 
+                                    WHEN i.result = 'passed' THEN 'Passed'
+                                    WHEN i.result = 'failed' THEN 'Failed'
+                                    ELSE 'Pending'
+                                END as interview_result,
+                                pc.start_rank,
+                                pc.end_rank,
+                                'Qualified' as final_status
+                            FROM applicants a
+                            JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
+                            JOIN programs p ON a.primary_program_id = p.program_id
+                            LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
+                            LEFT JOIN applications app ON a.user_id = app.user_id
+                            LEFT JOIN interviews i ON app.application_id = i.application_id
+                            LEFT JOIN program_cutoffs pc ON p.program_id = pc.program_id
+                            WHERE p.program_id = ?
+                            AND esc.score IS NOT NULL
+                        ) ranked
+                        WHERE ranked.overall_rank >= ranked.start_rank AND ranked.overall_rank <= ranked.end_rank
+                        ORDER BY ranked.final_score DESC, ranked.overall_rank ASC
                     ";
 
                     if ($stmt = mysqli_prepare($conn, $rankings_query)) {
@@ -1044,8 +1039,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                     <div class="stat-item">
                                         <div class="value">
                                             <?php 
-                                            $avg_exam = array_sum(array_column($rankings, 'exam_score')) / count($rankings);
-                                            echo number_format($avg_exam, 2);
+                                            $exam_count = count($rankings);
+                                            $avg_exam = $exam_count > 0 ? array_sum(array_column($rankings, 'exam_score')) / $exam_count : 0;
+                                            echo $exam_count > 0 ? number_format($avg_exam, 2) : 'N/A';
                                             ?>
                                         </div>
                                         <div class="label">Average Exam Score</div>
@@ -1053,10 +1049,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                     <div class="stat-item">
                                         <div class="value">
                                             <?php 
-                                            $avg_interview = array_sum(array_map(function($r) {
-                                                return $r['interview_score'] ? ($r['interview_score'] / 25 * 100) : 0;
-                                            }, $rankings)) / count($rankings);
-                                            echo number_format($avg_interview, 2);
+                                            $avg_interview = 0;
+                                            if ($exam_count > 0) {
+                                                $interview_sum = array_sum(array_map(function($r) {
+                                                    return $r['interview_score'] ? ($r['interview_score'] / 25 * 100) : 0;
+                                                }, $rankings));
+                                                $avg_interview = $interview_sum / $exam_count;
+                                            }
+                                            echo $exam_count > 0 ? number_format($avg_interview, 2) : 'N/A';
                                             ?>
                                         </div>
                                         <div class="label">Average Interview Score</div>
@@ -1108,7 +1108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                             <td class="status-<?php echo strtolower(str_replace(' ', '-', $ranking['final_status'])); ?>">
                                                 <?php echo $ranking['final_status']; ?>
                                             </td>
-                                            <td><?php echo $ranking['cutoff_rank'] ?? 'N/A'; ?></td>
+                                            <td><?php echo isset($ranking['start_rank'], $ranking['end_rank']) ? $ranking['start_rank'] . '–' . $ranking['end_rank'] : 'N/A'; ?></td>
                                         </tr>
                                         <?php endforeach; ?>
                                     </tbody>

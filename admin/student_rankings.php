@@ -24,7 +24,7 @@ $ranking_type = isset($_GET['type']) ? $_GET['type'] : 'overall'; // 'overall' o
 $programs_query = "SELECT program_id, program_name FROM programs ORDER BY program_name";
 $programs = mysqli_query($conn, $programs_query);
 
-// Build the overall rankings query (based on exam scores only)
+// Build the overall rankings query (exam scores only)
 $overall_rankings_query = "
     SELECT 
         a.applicant_id,
@@ -33,70 +33,66 @@ $overall_rankings_query = "
         a.last_name,
         p1.program_name as primary_program,
         p2.program_name as secondary_program,
-        er.score as exam_score,
-        RANK() OVER (ORDER BY er.score DESC) as overall_rank
+        esc.score as exam_score,
+        RANK() OVER (ORDER BY esc.score DESC) as overall_rank
     FROM applicants a
     JOIN users u ON a.user_id = u.user_id
     JOIN programs p1 ON a.primary_program_id = p1.program_id
     LEFT JOIN programs p2 ON a.secondary_program_id = p2.program_id
-    LEFT JOIN exam_results er ON u.user_id = er.user_id
-    WHERE er.score IS NOT NULL
+    LEFT JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
+    LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
+    WHERE esc.score IS NOT NULL
     ORDER BY overall_rank
 ";
 
 // Build the program-specific rankings query (based on combined scores)
 $program_rankings_query = "
-    SELECT 
-        a.applicant_id,
-        a.first_name,
-        a.middle_name,
-        a.last_name,
-        p.program_name,
-        p1.program_name as primary_program,
-        p2.program_name as secondary_program,
-        er.score as exam_score,
-        i.score as interview_score,
-        ROUND(
-            (COALESCE(er.score, 0) * 0.75) + 
-            ((COALESCE(i.score, 0) / 25 * 100) * 0.25), 
-            2
-        ) as combined_score,
-        RANK() OVER (
-            PARTITION BY p.program_id 
-            ORDER BY 
-                (COALESCE(er.score, 0) * 0.75) + 
-                ((COALESCE(i.score, 0) / 25 * 100) * 0.25) DESC
-        ) as program_rank,
-        pc.cutoff_rank,
-        CASE 
-            WHEN RANK() OVER (
+    SELECT * FROM (
+        SELECT 
+            a.applicant_id,
+            a.first_name,
+            a.middle_name,
+            a.last_name,
+            p.program_name,
+            p1.program_name as primary_program,
+            p2.program_name as secondary_program,
+            esc.score as exam_score,
+            i.score as interview_score,
+            ROUND(
+                (COALESCE(esc.score, 0) * 0.75) + 
+                ((COALESCE(i.score, 0) / 25 * 100) * 0.25), 
+                2
+            ) as combined_score,
+            RANK() OVER (
                 PARTITION BY p.program_id 
                 ORDER BY 
-                    (COALESCE(er.score, 0) * 0.75) + 
+                    (COALESCE(esc.score, 0) * 0.75) + 
                     ((COALESCE(i.score, 0) / 25 * 100) * 0.25) DESC
-            ) <= COALESCE(pc.cutoff_rank, 999999) THEN 1
-            ELSE 0
-        END as is_eligible
-    FROM applicants a
-    JOIN users u ON a.user_id = u.user_id
-    JOIN programs p ON a.primary_program_id = p.program_id
-    LEFT JOIN programs p1 ON a.primary_program_id = p1.program_id
-    LEFT JOIN programs p2 ON a.secondary_program_id = p2.program_id
-    LEFT JOIN exam_results er ON u.user_id = er.user_id
-    LEFT JOIN applications app ON a.user_id = app.user_id
-    LEFT JOIN interviews i ON app.application_id = i.application_id AND i.status = 'completed'
-    LEFT JOIN program_cutoffs pc ON p.program_id = pc.program_id
-    WHERE er.score IS NOT NULL
+            ) as program_rank,
+            pc.start_rank, pc.end_rank
+        FROM applicants a
+        JOIN users u ON a.user_id = u.user_id
+        JOIN programs p ON a.primary_program_id = p.program_id
+        LEFT JOIN programs p1 ON a.primary_program_id = p1.program_id
+        LEFT JOIN programs p2 ON a.secondary_program_id = p2.program_id
+        LEFT JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
+        LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
+        LEFT JOIN applications app ON a.user_id = app.user_id
+        LEFT JOIN interviews i ON app.application_id = i.application_id AND i.status = 'completed'
+        LEFT JOIN program_cutoffs pc ON p.program_id = pc.program_id
+        WHERE esc.score IS NOT NULL
+        " . ($program_filter ? " AND p.program_id = $program_filter" : "") . "
+    ) ranked
+    ORDER BY ranked.program_name, ranked.program_rank
 ";
-
-if ($program_filter) {
-    $program_rankings_query .= " AND p.program_id = " . $program_filter;
-}
-
-$program_rankings_query .= " ORDER BY p.program_name, program_rank";
 
 // Execute the appropriate query based on ranking type
 $rankings = mysqli_query($conn, $ranking_type === 'overall' ? $overall_rankings_query : $program_rankings_query);
+if (!$rankings) {
+    echo '<div class="alert alert-danger">Query failed: ' . mysqli_error($conn) . '</div>';
+    echo '<pre>' . htmlspecialchars($ranking_type === 'overall' ? $overall_rankings_query : $program_rankings_query) . '</pre>';
+    exit;
+}
 ?>
 
 <!-- Main Content -->
@@ -196,13 +192,13 @@ $rankings = mysqli_query($conn, $ranking_type === 'overall' ? $overall_rankings_
                                         <td><?php echo $ranking['interview_score'] ? number_format(($ranking['interview_score'] / 25 * 100), 2) : 'N/A'; ?></td>
                                         <td><?php echo number_format($ranking['combined_score'], 2); ?></td>
                                         <td>
-                                            <?php if ($ranking['is_eligible']): ?>
+                                            <?php if ($ranking['program_rank'] >= $ranking['start_rank'] && $ranking['program_rank'] <= $ranking['end_rank']): ?>
                                                 <span class="badge bg-success">Eligible</span>
                                             <?php else: ?>
                                                 <span class="badge bg-danger">Not Eligible</span>
                                             <?php endif; ?>
                                         </td>
-                                        <td><?php echo $ranking['cutoff_rank'] ?? 'Not Set'; ?></td>
+                                        <td><?php echo isset($ranking['start_rank'], $ranking['end_rank']) ? $ranking['start_rank'] . '–' . $ranking['end_rank'] : 'Not Set'; ?></td>
                                     <?php endif; ?>
                                 </tr>
                                 <?php endwhile; ?>
@@ -248,4 +244,4 @@ $(document).ready(function() {
         ]
     });
 });
-</script> 
+</script>

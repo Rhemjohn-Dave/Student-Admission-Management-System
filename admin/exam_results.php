@@ -40,23 +40,23 @@ $results_query = "
         es.venue,
         es.exam_id,
         es.status as exam_status,
-        er.score as exam_score,
+        esc.score as exam_score,
         CASE 
-            WHEN er.score IS NULL THEN 'pending'
-            WHEN er.score >= 75 THEN 'passed'
+            WHEN esc.score IS NULL THEN 'pending'
+            WHEN esc.score >= 75 THEN 'passed'
             ELSE 'failed'
         END as result_status,
-        er.created_at,
+        esc.created_at,
         RANK() OVER (
             PARTITION BY p.program_id 
-            ORDER BY er.score DESC
+            ORDER BY esc.score DESC
         ) as program_rank
     FROM exam_registrations reg
     JOIN applicants a ON reg.applicant_id = a.applicant_id
     JOIN users u ON a.user_id = u.user_id
     JOIN programs p ON a.primary_program_id = p.program_id
     JOIN exam_schedules es ON reg.exam_schedule_id = es.exam_id
-    LEFT JOIN exam_results er ON u.user_id = er.user_id AND es.exam_id = er.exam_id
+    LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
     " . ($program_filter ? "WHERE p.program_id = " . $program_filter : "") . "
     ORDER BY p.program_name, program_rank
 ";
@@ -66,12 +66,23 @@ $results = mysqli_query($conn, $results_query);
 // Get statistics
 $stats_query = "
     SELECT 
-        COUNT(*) as total,
-        SUM(CASE WHEN er.score IS NULL THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN er.score >= 75 THEN 1 ELSE 0 END) as passed,
-        SUM(CASE WHEN er.score < 75 AND er.score IS NOT NULL THEN 1 ELSE 0 END) as failed
-    FROM applicants a
-    LEFT JOIN exam_results er ON a.user_id = er.user_id
+        COUNT(DISTINCT reg.registration_id) as total,
+        SUM(CASE 
+            WHEN esc.score IS NULL AND reg.status = 'registered' THEN 1 
+            ELSE 0 
+        END) as pending,
+        SUM(CASE 
+            WHEN esc.score >= 75 THEN 1 
+            ELSE 0 
+        END) as passed,
+        SUM(CASE 
+            WHEN esc.score < 75 AND esc.score IS NOT NULL THEN 1 
+            ELSE 0 
+        END) as failed
+    FROM exam_registrations reg
+    JOIN applicants a ON reg.applicant_id = a.applicant_id
+    JOIN exam_schedules es ON reg.exam_schedule_id = es.exam_id
+    LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
     " . ($program_filter ? "WHERE a.primary_program_id = " . $program_filter : "");
 $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
 ?>
@@ -106,7 +117,7 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                         <div class="card-body">
                             <div class="row no-gutters align-items-center">
                                 <div class="col mr-2">
-                                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Applicants</div>
+                                    <div class="text-xs font-weight-bold text-secondary text-uppercase mb-1">Total Applicants</div>
                                     <div class="h5 mb-0 font-weight-bold text-gray-800"><?php echo $stats['total']; ?></div>
                                 </div>
                                 <div class="col-auto">
@@ -203,7 +214,7 @@ $stats = mysqli_fetch_assoc(mysqli_query($conn, $stats_query));
                                     <td>
                                         <?php 
                                         if ($result['exam_score'] !== null) {
-                                            echo number_format($result['exam_score'], 2);
+                                            echo '<span class="fw-bold">' . number_format($result['exam_score'], 2) . '%</span>';
                                         } else {
                                             echo '<span class="text-muted">Not yet rated</span>';
                                         }

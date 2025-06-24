@@ -246,7 +246,8 @@ CREATE TABLE activity_log (
 CREATE TABLE program_cutoffs (
     cutoff_id INT PRIMARY KEY AUTO_INCREMENT,
     program_id INT NOT NULL,
-    cutoff_rank INT NOT NULL,
+    start_rank INT NOT NULL,
+    end_rank INT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

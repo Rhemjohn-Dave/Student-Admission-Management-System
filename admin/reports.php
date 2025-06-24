@@ -11,9 +11,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_type'] !== 'admin') {
 // Set page title
 $page_title = "Reports - Student Admissions Management System";
 
-// Include header
-include '../includes/header.php';
-
 // Get all programs for the dropdown
 $programs_query = "SELECT program_id, program_name FROM programs ORDER BY program_name";
 $programs = mysqli_query($conn, $programs_query);
@@ -34,7 +31,6 @@ $interviews_query = "
     JOIN users u ON s.created_by = u.user_id
     ORDER BY s.interview_date ASC, s.time_window ASC
 ";
-
 $interviews_result = mysqli_query($conn, $interviews_query);
 
 // Get exam schedules for the dropdown
@@ -50,13 +46,11 @@ $schedules_query = "
     FROM exam_schedules es
     ORDER BY es.exam_date DESC, es.exam_time DESC
 ";
-
 $schedules_result = mysqli_query($conn, $schedules_query);
 ?>
 
 <div class="container-fluid">
     <h1 class="h3 mb-4 text-gray-800">Reports</h1>
-    
     <div class="card shadow mb-4">
         <div class="card-header py-3">
             <h6 class="m-0 font-weight-bold text-primary">Generate Reports</h6>
@@ -70,7 +64,7 @@ $schedules_result = mysqli_query($conn, $schedules_query);
                             <h6 class="m-0 font-weight-bold text-primary">Exam Schedule Report</h6>
                         </div>
                         <div class="card-body">
-                            <form id="examScheduleForm" method="post" action="handlers/generate_report.php" target="_blank">
+                            <form id="examScheduleForm" method="post" action="../admin/handlers/generate_report.php" target="_blank">
                                 <input type="hidden" name="action" value="exam_schedule">
                                 <div class="form-group">
                                     <label for="schedule_id">Select Exam Schedule</label>
@@ -104,7 +98,7 @@ $schedules_result = mysqli_query($conn, $schedules_query);
                             <h6 class="m-0 font-weight-bold text-primary">Exam Rankings Report</h6>
                         </div>
                         <div class="card-body">
-                            <form id="examRankingsForm" method="post" action="handlers/generate_report.php" target="_blank">
+                            <form id="examRankingsForm" method="post" action="../admin/handlers/generate_report.php" target="_blank">
                                 <input type="hidden" name="action" value="exam_rankings">
                                 <div class="form-group">
                                     <label for="program_id">Select Program (Optional)</label>
@@ -139,7 +133,7 @@ $schedules_result = mysqli_query($conn, $schedules_query);
                             <h6 class="m-0 font-weight-bold text-primary">Interview Schedule Report</h6>
                         </div>
                         <div class="card-body">
-                            <form id="interviewScheduleForm" method="post" action="handlers/generate_report.php" target="_blank">
+                            <form id="interviewScheduleForm" method="post" action="../admin/handlers/generate_report.php" target="_blank">
                                 <input type="hidden" name="action" value="interview_schedule">
                                 <div class="form-group">
                                     <label for="program_id">Select Program (Optional)</label>
@@ -187,7 +181,7 @@ $schedules_result = mysqli_query($conn, $schedules_query);
                             <h6 class="m-0 font-weight-bold text-primary">Final Rankings Report</h6>
                         </div>
                         <div class="card-body">
-                            <form id="finalRankingsForm" method="post" action="handlers/generate_report.php" target="_blank">
+                            <form id="finalRankingsForm" method="post" action="../admin/handlers/generate_report.php" target="_blank">
                                 <input type="hidden" name="action" value="final_rankings">
                                 <div class="form-group">
                                     <label for="final_rankings_program">Select Program</label>
@@ -233,6 +227,4 @@ $(document).ready(function() {
         order: [[0, 'asc']]
     });
 });
-</script>
-
-<?php include '../includes/footer.php'; ?> 
+</script> 

@@ -194,33 +194,29 @@ if (isset($_POST['action'])) {
 
             $schedule_id = intval($_POST['schedule_id']);
 
-            // Check if schedule exists and has registered applicants
-            $check_query = "
-                SELECT 
-                    es.*,
-                    COUNT(er.registration_id) as registered_count
-                FROM exam_schedules es
-                LEFT JOIN exam_registrations er ON es.exam_id = er.exam_schedule_id AND er.status = 'registered'
-                WHERE es.exam_id = ?
-                GROUP BY es.exam_id
-            ";
-            
-            $check_stmt = $conn->prepare($check_query);
-            if (!$check_stmt) {
+            // Debug log
+            file_put_contents($log_file, "Checking schedule ID: $schedule_id\n", FILE_APPEND);
+
+            // First check if schedule exists
+            $schedule_query = "SELECT * FROM exam_schedules WHERE exam_id = ?";
+            $schedule_stmt = $conn->prepare($schedule_query);
+            if (!$schedule_stmt) {
+                file_put_contents($log_file, "Error preparing schedule query: " . $conn->error . "\n", FILE_APPEND);
                 echo json_encode([
                     'status' => 'error',
-                    'message' => 'Error preparing validation query: ' . $conn->error
+                    'message' => 'Error preparing schedule query: ' . $conn->error
                 ]);
                 exit();
             }
 
-            $check_stmt->bind_param("i", $schedule_id);
-            $check_stmt->execute();
-            $result = $check_stmt->get_result();
-            $schedule = $result->fetch_assoc();
-            $check_stmt->close();
+            $schedule_stmt->bind_param("i", $schedule_id);
+            $schedule_stmt->execute();
+            $schedule_result = $schedule_stmt->get_result();
+            $schedule = $schedule_result->fetch_assoc();
+            $schedule_stmt->close();
 
             if (!$schedule) {
+                file_put_contents($log_file, "Schedule not found for ID: $schedule_id\n", FILE_APPEND);
                 echo json_encode([
                     'status' => 'error',
                     'message' => 'Exam schedule not found.'
@@ -228,10 +224,38 @@ if (isset($_POST['action'])) {
                 exit();
             }
 
-            if ($schedule['registered_count'] == 0) {
+            file_put_contents($log_file, "Schedule found: " . print_r($schedule, true) . "\n", FILE_APPEND);
+
+            // Then check for registered applicants
+            $registrations_query = "
+                SELECT COUNT(*) as registered_count
+                FROM exam_registrations er
+                WHERE er.exam_schedule_id = ?
+            ";
+            
+            $registrations_stmt = $conn->prepare($registrations_query);
+            if (!$registrations_stmt) {
+                file_put_contents($log_file, "Error preparing registrations query: " . $conn->error . "\n", FILE_APPEND);
                 echo json_encode([
                     'status' => 'error',
-                    'message' => 'Cannot mark schedule as completed. No registered applicants found.'
+                    'message' => 'Error preparing registrations query: ' . $conn->error
+                ]);
+                exit();
+            }
+
+            $registrations_stmt->bind_param("i", $schedule_id);
+            $registrations_stmt->execute();
+            $registrations_result = $registrations_stmt->get_result();
+            $registrations = $registrations_result->fetch_assoc();
+            $registrations_stmt->close();
+
+            file_put_contents($log_file, "Registration count: " . print_r($registrations, true) . "\n", FILE_APPEND);
+
+            if ($registrations['registered_count'] == 0) {
+                file_put_contents($log_file, "No registrations found for schedule ID: $schedule_id\n", FILE_APPEND);
+                echo json_encode([
+                    'status' => 'error',
+                    'message' => 'Cannot mark schedule as completed. No registrations found for this exam schedule.'
                 ]);
                 exit();
             }

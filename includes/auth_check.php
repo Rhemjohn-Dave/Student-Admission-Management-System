@@ -4,10 +4,15 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Check if the user is not logged in
-if(!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true){
-    // Redirect to login page
-    header("location: auth/login.php");
+// Check if user is logged in
+if (!isset($_SESSION["loggedin"]) || $_SESSION["loggedin"] !== true) {
+    header("location: ../auth/login.php");
+    exit;
+}
+
+// Check if user type is set
+if (!isset($_SESSION["user_type"])) {
+    header("location: ../auth/login.php");
     exit;
 }
 
@@ -25,23 +30,15 @@ $user_type = $_SESSION["user_type"] ?? '';
 
 // Define allowed pages for each user type
 $allowed_pages = [
-    'admin' => ['index.php', 'dashboard.php', 'interviewers.php', 'colleges.php', 'programs.php', 'exam_schedules.php', 'interview_schedules.php', 'exam_results.php', 'student_records.php', 'approve_applications.php', 'profile.php', 'reports.php'],
-    'interviewer' => ['index.php', 'dashboard.php', 'interview_schedules.php', 'interview_results.php', 'profile.php'],
-    'applicant' => ['index.php', 'dashboard.php', 'application.php', 'exam_schedule.php', 'interview_schedule.php', 'results.php', 'profile.php']
+    'admin' => ['dashboard', 'interviewers', 'colleges', 'exam_schedules', 'interview_schedules', 
+                'exam_results', 'programs', 'encode_scores', 'exam_rankings', 'program_cutoffs', 
+                'student_rankings', 'student_records.php', 'profile.php', 'reports.php'],
+    'interviewer' => ['dashboard', 'interview_schedules', 'interview_evaluation', 'interview_results', 'profile'],
+    'applicant' => ['dashboard', 'exam_registration', 'exam_schedule', 'exam_result', 'profile']
 ];
 
 // Check if the current page is allowed for the user type
 if (!in_array($current_page, $allowed_pages[$user_type] ?? [])) {
-    // Redirect to appropriate dashboard
-    if ($user_type === 'admin') {
-        header("location: admin/index.php");
-    } else if ($user_type === 'interviewer') {
-        header("location: interviewer/index.php");
-    } else if ($user_type === 'applicant') {
-        header("location: applicant/index.php");
-    } else {
-        header("location: index.php");
-    }
-    exit;
+    $page = 'dashboard';
 }
 ?> 

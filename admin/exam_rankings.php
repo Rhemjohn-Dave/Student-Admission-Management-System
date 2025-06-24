@@ -94,13 +94,14 @@ function recalculateRankings($conn) {
             SELECT 
                 a.applicant_id,
                 ?,
-                er.score,
-                RANK() OVER (ORDER BY er.score DESC),
-                CASE WHEN RANK() OVER (ORDER BY er.score DESC) <= ? THEN TRUE ELSE FALSE END
+                esc.score,
+                RANK() OVER (ORDER BY esc.score DESC),
+                CASE WHEN RANK() OVER (ORDER BY esc.score DESC) <= ? THEN TRUE ELSE FALSE END
             FROM applicants a
-            JOIN exam_results er ON a.user_id = er.user_id
+            JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
+            JOIN exam_scores esc ON reg.registration_id = esc.registration_id
             WHERE a.primary_program_id = ? OR a.secondary_program_id = ?
-            AND er.score IS NOT NULL
+            AND esc.score IS NOT NULL
         ";
         
         $rank_stmt = $conn->prepare($rank_query);
@@ -177,7 +178,8 @@ $programs_query = "
     SELECT 
         p.program_id,
         p.program_name,
-        pc.cutoff_rank,
+        pc.start_rank,
+        pc.end_rank,
         pc.is_active
     FROM programs p
     LEFT JOIN program_cutoffs pc ON p.program_id = pc.program_id
@@ -196,7 +198,8 @@ $rankings_query = "
         p2.program_name as secondary_program,
         p3.program_name as assigned_program,
         p.program_name,
-        pc.cutoff_rank
+        pc.start_rank,
+        pc.end_rank
     FROM program_rankings pr
     JOIN applicants a ON pr.applicant_id = a.applicant_id
     JOIN programs p ON pr.program_id = p.program_id
@@ -245,7 +248,7 @@ $rankings = mysqli_query($conn, $rankings_query);
                                                 <input type="number" 
                                                        name="cutoff_rank" 
                                                        class="form-control" 
-                                                       value="<?php echo $program['cutoff_rank'] ?? ''; ?>"
+                                                       value="<?php echo isset($program['start_rank'], $program['end_rank']) ? $program['start_rank'] . '–' . $program['end_rank'] : ''; ?>"
                                                        min="1"
                                                        required>
                                                 <div class="input-group-append">
