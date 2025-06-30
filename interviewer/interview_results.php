@@ -64,6 +64,8 @@ if ($stmt = mysqli_prepare($conn, $interviews_query)) {
     mysqli_stmt_execute($stmt);
     $interviews = mysqli_stmt_get_result($stmt);
 }
+
+$interview_data = array(); // Always initialize interview_data as an array
 ?>
 
 <!-- Page Heading -->
@@ -115,7 +117,6 @@ if ($stmt = mysqli_prepare($conn, $interviews_query)) {
                     </thead>
                     <tbody>
                         <?php 
-                        $interview_data = array(); // Store interview data for modals
                         while ($interview = $interviews->fetch_assoc()): 
                             $interview_data[] = $interview; // Store interview data
                         ?>

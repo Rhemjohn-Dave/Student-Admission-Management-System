@@ -310,3 +310,57 @@ CREATE TABLE program_rankings (
   CONSTRAINT fk_rankings_program FOREIGN KEY (program_id) REFERENCES programs(program_id) ON DELETE CASCADE,
   CONSTRAINT fk_rankings_assigned_program FOREIGN KEY (assigned_program_id) REFERENCES programs(program_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4; 
+
+
+INSERT INTO `programs` (`program_id`, `college_id`, `program_head_id`, `program_name`, `program_code`, `description`, `created_at`, `updated_at`) VALUES
+(1, 1, 1, 'Bachelor of Science in Electronics Engineering', 'BS ECE', 'Electronics Engineering program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(2, 1, 2, 'Bachelor of Science in Mechanical Engineering', 'BS ME', 'Mechanical Engineering program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(3, 1, 3, 'Bachelor of Science in Computer Engineering', 'BS CPE', 'Computer Engineering program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(4, 1, 4, 'Bachelor of Science in Electrical Engineering', 'BS EE', 'Electrical Engineering program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(5, 2, 5, 'Bachelor of Science in Instrumentation and Control Engineering Technology', 'BS ICET', 'Instrumentation and Control Engineering Technology program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(6, 2, 6, 'Bachelor of Science in Mechatronics Engineering', 'BS MxE', 'Mechatronics Engineering program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(7, 2, 7, 'Bachelor of Science in Mechatronics Engineering Technology', 'BS MxT', 'Mechatronics Engineering Technology program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(8, 3, 8, 'Bachelor of Science in Chemistry', 'BS Chem', 'Chemistry program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(9, 3, 9, 'Bachelor of Engineering major in Chemical Engineering Technology', 'BE ChET', 'Chemical Engineering Technology program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(10, 3, 10, 'Bachelor of Science in Automotive Engineering', 'BS AutoE', 'Automotive Engineering program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(11, 3, 11, 'Bachelor of Science in Computer Engineering Technology', 'BS CpET', 'Computer Engineering Technology program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(12, 3, 12, 'Bachelor of Science in Electrical Engineering Technology', 'BS EET', 'Electrical Engineering Technology program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(13, 3, 13, 'Bachelor of Science in Electromechanical Engineering Technology', 'BS EMET', 'Electromechanical Engineering Technology program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(14, 3, 14, 'Bachelor of Science in Heating, Ventilation and Air Conditioning-Refrigeration Engineering Technolog', 'BS HVAC-RET', 'HVAC-RET program', '2025-05-30 13:28:23', '2025-05-30 13:28:24'),
+(15, 3, 15, 'Bachelor of Science in Manufacturing Engineering Technology', 'BS MFET', 'Manufacturing Engineering Technology program', '2025-05-30 13:28:23', '2025-05-30 13:28:23');
+
+
+INSERT INTO `users` (`user_id`, `username`, `password`, `first_name`, `last_name`, `email`, `phone`, `user_type`, `status`, `created_at`, `updated_at`) VALUES
+(1, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'System', 'Administrator', 'admin@tup.edu.ph', NULL, 'admin', 'active', '2025-05-30 13:28:23', '2025-06-24 02:24:58'),
+(2, 'ph_ece', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Renato', 'Deldo', 'ph_ece@tup.edu.ph', '', 'interviewer', 'active', '2025-05-30 13:28:23', '2025-06-02 05:55:08'),
+(3, 'ph_me', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Jane', 'Doe', 'ph_me@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(4, 'ph_cpe', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Robert', 'Johnson', 'ph_cpe@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(5, 'ph_ee', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Sarah', 'Williams', 'ph_ee@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(6, 'ph_icet', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Michael', 'Brown', 'ph_icet@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(7, 'ph_mxe', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Emily', 'Davis', 'ph_mxe@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(8, 'ph_mxt', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Emily', 'Davis', 'ph_mxt@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(9, 'ph_chem', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'David', 'Wilson', 'ph_chem@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(10, 'ph_chet', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Patricia', 'Taylor', 'ph_chet@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(11, 'ph_auto', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'James', 'Anderson', 'ph_auto@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(12, 'ph_cpet', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Jennifer', 'Thomas', 'ph_cpet@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(13, 'ph_eet', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Richard', 'Jackson', 'ph_eet@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(14, 'ph_emet', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Susan', 'White', 'ph_emet@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(15, 'ph_hvac', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Charles', 'Harris', 'ph_hvac@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(16, 'ph_mfet', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Margaret', 'Martin', 'ph_mfet@tup.edu.ph', NULL, 'interviewer', 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23');
+
+INSERT INTO `program_heads` (`program_head_id`, `user_id`, `program_id`, `status`, `created_at`, `updated_at`) VALUES
+(1, 2, 1, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(2, 3, 2, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(3, 4, 3, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(4, 5, 4, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(5, 6, 5, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(6, 7, 6, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(7, 8, 7, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(8, 9, 8, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(9, 10, 9, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(10, 11, 10, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(11, 12, 11, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(12, 13, 12, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(13, 14, 13, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(14, 15, 14, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23'),
+(15, 16, 15, 'active', '2025-05-30 13:28:23', '2025-05-30 13:28:23');
