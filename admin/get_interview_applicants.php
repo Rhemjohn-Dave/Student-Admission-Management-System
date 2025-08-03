@@ -71,7 +71,7 @@ if(isset($_POST['schedule_id'])) {
                         break;
                     case 'completed':
                         if($row['result'] == 'passed') {
-                            echo "<span class='badge bg-success'>Passed</span>";
+                            echo "<span class='badge bg-success'>Done</span>";
                         } else if($row['result'] == 'failed') {
                             echo "<span class='badge bg-danger'>Failed</span>";
                         } else {
