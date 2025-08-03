@@ -101,6 +101,9 @@ $page_title = ucfirst($page) . " - Admin Dashboard";
                         case 'student_records':
                             include 'student_records.php';
                             break;
+                        case 'manage_student_programs':
+                            include 'manage_student_programs.php';
+                            break;
                         case 'exam_rankings':
                             include 'exam_rankings.php';
                             break;
@@ -138,7 +141,7 @@ $page_title = ucfirst($page) . " - Admin Dashboard";
     <script src="../assets/js/sb-admin-2.min.js"></script>
 
     <!-- Page level plugins - Only include if needed -->
-    <?php if (in_array($page, ['interviewers', 'colleges', 'exam_schedules', 'interview_schedules', 'student_records', 'programs', 'exam_rankings', 'encode_scores', 'exam_results', 'program_cutoffs', 'student_rankings'])): ?>
+    <?php if (in_array($page, ['interviewers', 'colleges', 'exam_schedules', 'interview_schedules', 'student_records', 'manage_student_programs', 'programs', 'exam_rankings', 'encode_scores', 'exam_results', 'program_cutoffs', 'student_rankings'])): ?>
     <!-- DataTables -->
     <script src="../assets/vendor/datatables/jquery.dataTables.min.js"></script>
     <script src="../assets/vendor/datatables/dataTables.bootstrap4.min.js"></script>

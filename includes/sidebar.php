@@ -115,6 +115,14 @@
             </a>
         </li>
 
+        <!-- Nav Item - Manage Student Programs -->
+        <li class="nav-item <?php echo (isset($_GET['page']) && $_GET['page'] == 'manage_student_programs') ? 'active' : ''; ?>">
+            <a class="nav-link" href="index.php?page=manage_student_programs">
+                <i class="fas fa-fw fa-exchange-alt"></i>
+                <span>Manage Student Programs</span>
+            </a>
+        </li>
+
         <!-- Nav Item - Reports -->
         <li class="nav-item <?php echo (isset($_GET['page']) && $_GET['page'] == 'reports') ? 'active' : ''; ?>">
             <a class="nav-link" href="index.php?page=reports">
