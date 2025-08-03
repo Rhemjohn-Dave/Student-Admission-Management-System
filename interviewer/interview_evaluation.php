@@ -18,11 +18,12 @@ if (!isset($_GET['id'])) {
 
 // Get interview details
 $interview = null;
-$sql = "SELECT i.*, u.first_name, u.last_name, p.program_name
+$sql = "SELECT i.*, u.first_name, u.last_name, p.program_name, s.time_window
         FROM interviews i
         JOIN applications a ON i.application_id = a.application_id
         JOIN users u ON a.user_id = u.user_id
         JOIN programs p ON a.program_id = p.program_id
+        JOIN interview_schedules s ON s.program_id = a.program_id AND s.interview_date = i.scheduled_date
         WHERE i.interview_id = ? AND i.interviewer_id = ?";
         
 if ($stmt = mysqli_prepare($conn, $sql)) {
@@ -102,7 +103,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['submit_evaluation'])) 
                 <p><strong>Applicant Name:</strong> <?php echo htmlspecialchars($interview['first_name'] . ' ' . $interview['last_name']); ?></p>
                 <p><strong>Program:</strong> <?php echo htmlspecialchars($interview['program_name']); ?></p>
                 <p><strong>Interview Date:</strong> <?php echo date('F d, Y', strtotime($interview['scheduled_date'])); ?></p>
-                <p><strong>Interview Time:</strong> <?php echo date('h:i A', strtotime($interview['scheduled_time'])); ?></p>
+                <p><strong>Interview Time:</strong> <?php echo $interview['time_window']; ?></p>
             </div>
         </div>
     </div>

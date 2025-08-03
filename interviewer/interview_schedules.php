@@ -91,6 +91,7 @@ $interviews_query = "
         a.last_name,
         u.email,
         p.program_name,
+        s.time_window,
         CONCAT(a.first_name, ' ', a.last_name) as applicant_name,
         CASE 
             WHEN i.status = 'scheduled' THEN 1
@@ -102,6 +103,7 @@ $interviews_query = "
     JOIN applicants a ON app.user_id = a.user_id
     JOIN users u ON a.user_id = u.user_id
     JOIN programs p ON app.program_id = p.program_id
+    JOIN interview_schedules s ON s.program_id = app.program_id AND s.interview_date = i.scheduled_date
     WHERE i.program_head_id = ?
     ORDER BY 
         status_order ASC,
@@ -190,7 +192,7 @@ include '../includes/navbar.php';
                                 <td><?php echo htmlspecialchars($interview['first_name'] . ' ' . $interview['last_name']); ?></td>
                                 <td><?php echo htmlspecialchars($interview['email']); ?></td>
                                 <td><?php echo date('F d, Y', strtotime($interview['scheduled_date'])); ?></td>
-                                <td><?php echo date('h:i A', strtotime($interview['scheduled_time'])); ?></td>
+                                <td><?php echo $interview['time_window']; ?></td>
                                 <td>
                                     <span class="badge badge-<?php 
                                         echo $interview['status'] == 'scheduled' ? 'primary' : 
@@ -383,7 +385,7 @@ include '../includes/navbar.php';
                                             <p><strong>Applicant:</strong> <?php echo htmlspecialchars($interview['first_name'] . ' ' . $interview['last_name']); ?></p>
                                             <p><strong>Email:</strong> <?php echo htmlspecialchars($interview['email']); ?></p>
                                             <p><strong>Date:</strong> <?php echo date('F d, Y', strtotime($interview['scheduled_date'])); ?></p>
-                                            <p><strong>Time:</strong> <?php echo date('h:i A', strtotime($interview['scheduled_time'])); ?></p>
+                                            <p><strong>Time:</strong> <?php echo $interview['time_window']; ?></p>
                                             <p><strong>Result:</strong> 
                                                 <span class="badge badge-<?php echo $interview['result'] == 'passed' ? 'success' : 'danger'; ?>">
                                                     <?php echo ucfirst($interview['result']); ?>

@@ -244,8 +244,20 @@ $stats = mysqli_fetch_assoc($stats_result);
                                     <td>
                                         <?php 
                                         if ($result['scheduled_date']) {
-                                            echo date('M d, Y', strtotime($result['scheduled_date'])) . ' ' . 
-                                                 date('h:i A', strtotime($result['scheduled_time']));
+                                            // Get the time window from interview schedule
+                                            $time_query = "SELECT s.time_window 
+                                                          FROM interview_schedules s 
+                                                          JOIN applications app ON s.program_id = app.program_id 
+                                                          WHERE app.user_id = (SELECT user_id FROM applicants WHERE applicant_id = ?) 
+                                                          AND s.interview_date = ?";
+                                            $time_stmt = mysqli_prepare($conn, $time_query);
+                                            mysqli_stmt_bind_param($time_stmt, "is", $result['applicant_id'], $result['scheduled_date']);
+                                            mysqli_stmt_execute($time_stmt);
+                                            $time_result = mysqli_stmt_get_result($time_stmt);
+                                            $time_row = mysqli_fetch_assoc($time_result);
+                                            
+                                            $time_display = $time_row ? $time_row['time_window'] : 'N/A';
+                                            echo date('M d, Y', strtotime($result['scheduled_date'])) . ' ' . $time_display;
                                         } else {
                                             echo 'N/A';
                                         }

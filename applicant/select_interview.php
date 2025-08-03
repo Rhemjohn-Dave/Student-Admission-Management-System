@@ -105,6 +105,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['schedule_id'])) {
                                 
                                 try {
                                     // Create the interview record
+                                    // Convert time window to actual time
+                                    $time_value = ($schedule['time_window'] == 'PM') ? '14:00:00' : '09:00:00'; // PM = 2:00 PM, AM = 9:00 AM
+                                    
                                     $insert_query = "INSERT INTO interviews (application_id, interviewer_id, program_head_id, scheduled_date, scheduled_time, status) VALUES (?, ?, ?, ?, ?, 'scheduled')";
                                     if ($stmt = mysqli_prepare($conn, $insert_query)) {
                                         mysqli_stmt_bind_param($stmt, "iiiss", 
@@ -112,7 +115,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['schedule_id'])) {
                                             $program['program_head_id'],
                                             $program['program_head_id'],
                                             $schedule['interview_date'],
-                                            $schedule['time_window']
+                                            $time_value
                                         );
                                         
                                         if (mysqli_stmt_execute($stmt)) {
