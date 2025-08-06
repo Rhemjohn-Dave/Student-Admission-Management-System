@@ -1025,3 +1025,22 @@ Registration count: Array
     [registered_count] => 2
 )
 
+
+
+2025-08-06 17:04:33 - New request started
+POST data: Array
+(
+    [action] => add_schedule
+    [date] => 2025-08-06
+    [time] => 08:00
+    [venue] => TUP
+    [max_participants] => 20
+)
+
+Received data for new schedule:
+exam_date: 2025-08-06
+exam_time: 08:00
+venue: TUP
+max_participants: 20
+Insert query: INSERT INTO exam_schedules (exam_date, exam_time, venue, max_participants, status) VALUES (?, ?, ?, ?, 'scheduled')
+Successfully added exam schedule with ID: 1

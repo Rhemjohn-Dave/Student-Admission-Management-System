@@ -287,34 +287,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             } else {
                 $rankings_query = "
                     SELECT 
-                        a.applicant_id,
-                        a.first_name,
-                        a.middle_name,
-                        a.last_name,
-                        p.program_name,
-                        p1.program_name as primary_program,
-                        p2.program_name as secondary_program,
-                        er.score as exam_score,
-                        RANK() OVER (
-                            PARTITION BY p.program_id 
-                            ORDER BY er.score DESC
-                        ) as program_rank,
+                        ranked.*,
                         pc.start_rank,
                         pc.end_rank,
                         CASE 
-                            WHEN program_rank >= pc.start_rank AND program_rank <= pc.end_rank THEN 'Eligible'
+                            WHEN ranked.program_rank >= pc.start_rank AND ranked.program_rank <= pc.end_rank THEN 'Eligible'
                             ELSE 'Not Eligible'
                         END as status
-                    FROM applicants a
-                    JOIN users u ON a.user_id = u.user_id
-                    JOIN programs p ON a.primary_program_id = p.program_id
-                    LEFT JOIN programs p1 ON a.primary_program_id = p1.program_id
-                    LEFT JOIN programs p2 ON a.secondary_program_id = p2.program_id
-                    LEFT JOIN exam_results er ON u.user_id = er.user_id
-                    LEFT JOIN program_cutoffs pc ON p.program_id = pc.program_id
-                    WHERE er.score IS NOT NULL
-                    " . ($program_id ? "AND p.program_id = $program_id" : "") . "
-                    ORDER BY p.program_name, program_rank
+                    FROM (
+                        SELECT 
+                            a.applicant_id,
+                            a.first_name,
+                            a.middle_name,
+                            a.last_name,
+                            p.program_name,
+                            p.program_id,
+                            p1.program_name as primary_program,
+                            p2.program_name as secondary_program,
+                            esc.score as exam_score,
+                            RANK() OVER (
+                                PARTITION BY p.program_id 
+                                ORDER BY esc.score DESC
+                            ) as program_rank
+                        FROM applicants a
+                        JOIN users u ON a.user_id = u.user_id
+                        JOIN programs p ON a.primary_program_id = p.program_id
+                        LEFT JOIN programs p1 ON a.primary_program_id = p1.program_id
+                        LEFT JOIN programs p2 ON a.secondary_program_id = p2.program_id
+                        LEFT JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
+                        LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
+                        WHERE esc.score IS NOT NULL
+                        " . ($program_id ? "AND p.program_id = $program_id" : "") . "
+                    ) ranked
+                    LEFT JOIN program_cutoffs pc ON ranked.program_id = pc.program_id
+                    ORDER BY ranked.program_name, ranked.program_rank
                 ";
             }
 
@@ -326,6 +332,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             $rankings = [];
             while ($row = mysqli_fetch_assoc($rankings_result)) {
                 $rankings[] = $row;
+            }
+            
+            // Debug: Log the query and results
+            error_log("Rankings query: " . $rankings_query);
+            error_log("Number of rankings found: " . count($rankings));
+            if (count($rankings) > 0) {
+                error_log("First ranking: " . print_r($rankings[0], true));
+            }
+            
+            // Debug: Check data availability
+            $debug_query = "
+                SELECT 
+                    COUNT(DISTINCT a.applicant_id) as total_applicants,
+                    COUNT(DISTINCT esc.registration_id) as total_scores,
+                    COUNT(DISTINCT p.program_id) as total_programs,
+                    COUNT(DISTINCT pc.program_id) as total_cutoffs
+                FROM applicants a
+                LEFT JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
+                LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
+                LEFT JOIN programs p ON a.primary_program_id = p.program_id
+                LEFT JOIN program_cutoffs pc ON p.program_id = pc.program_id
+            ";
+            $debug_result = mysqli_query($conn, $debug_query);
+            if ($debug_result) {
+                $debug_data = mysqli_fetch_assoc($debug_result);
+                error_log("Debug data: " . print_r($debug_data, true));
+            }
+            
+            // Debug: Check if there are any exam scores
+            $scores_query = "SELECT COUNT(*) as score_count FROM exam_scores WHERE score IS NOT NULL";
+            $scores_result = mysqli_query($conn, $scores_query);
+            if ($scores_result) {
+                $scores_data = mysqli_fetch_assoc($scores_result);
+                error_log("Exam scores count: " . $scores_data['score_count']);
+            }
+            
+            // Debug: Check if there are any program cutoffs
+            $cutoffs_query = "SELECT COUNT(*) as cutoff_count FROM program_cutoffs";
+            $cutoffs_result = mysqli_query($conn, $cutoffs_query);
+            if ($cutoffs_result) {
+                $cutoffs_data = mysqli_fetch_assoc($cutoffs_result);
+                error_log("Program cutoffs count: " . $cutoffs_data['cutoff_count']);
+            }
+            
+            // Debug: Check specific program data
+            if ($program_id) {
+                $program_scores_query = "
+                    SELECT COUNT(*) as program_scores
+                    FROM applicants a
+                    JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
+                    JOIN exam_scores esc ON reg.registration_id = esc.registration_id
+                    WHERE a.primary_program_id = $program_id AND esc.score IS NOT NULL
+                ";
+                $program_scores_result = mysqli_query($conn, $program_scores_query);
+                if ($program_scores_result) {
+                    $program_scores_data = mysqli_fetch_assoc($program_scores_result);
+                    error_log("Scores for program $program_id: " . $program_scores_data['program_scores']);
+                }
+                
+                $program_cutoff_query = "SELECT start_rank, end_rank FROM program_cutoffs WHERE program_id = $program_id";
+                $program_cutoff_result = mysqli_query($conn, $program_cutoff_query);
+                if ($program_cutoff_result && mysqli_num_rows($program_cutoff_result) > 0) {
+                    $program_cutoff_data = mysqli_fetch_assoc($program_cutoff_result);
+                    error_log("Cutoff for program $program_id: " . print_r($program_cutoff_data, true));
+                } else {
+                    error_log("No cutoff found for program $program_id");
+                }
             }
 
             // Generate the report HTML
@@ -820,7 +893,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 if ($program) {
                     // Get final rankings with both exam and interview scores, only one row per applicant
                     $rankings_query = "
-                        SELECT * FROM (
+                        SELECT 
+                            ranked.*,
+                            pc.start_rank,
+                            pc.end_rank,
+                            CASE 
+                                WHEN ranked.overall_rank <= pc.end_rank THEN 'Qualified'
+                                ELSE 'Not Qualified'
+                            END as final_status
+                        FROM (
                             SELECT 
                                 a.applicant_id,
                                 a.first_name,
@@ -829,57 +910,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                                 a.gender,
                                 p.program_name,
                                 esc.score as exam_score,
-                                -- Only get the highest scored interview for this applicant/program
-                                (
-                                    SELECT i2.score FROM interviews i2
-                                    JOIN applications app2 ON i2.application_id = app2.application_id
-                                    WHERE app2.user_id = a.user_id AND app2.program_id = p.program_id AND i2.status = 'completed'
-                                    ORDER BY i2.score DESC, i2.completed_date DESC LIMIT 1
-                                ) as interview_score,
-                                (
-                                    SELECT i2.result FROM interviews i2
-                                    JOIN applications app2 ON i2.application_id = app2.application_id
-                                    WHERE app2.user_id = a.user_id AND app2.program_id = p.program_id AND i2.status = 'completed'
-                                    ORDER BY i2.score DESC, i2.completed_date DESC LIMIT 1
-                                ) as interview_result,
+                                COALESCE(i.score, 0) as interview_score,
+                                COALESCE(i.result, 'Not yet rated') as interview_result,
                                 ROUND(
                                     (COALESCE(esc.score, 0) * 0.75) + 
-                                    ((COALESCE((
-                                        SELECT i2.score FROM interviews i2
-                                        JOIN applications app2 ON i2.application_id = app2.application_id
-                                        WHERE app2.user_id = a.user_id AND app2.program_id = p.program_id AND i2.status = 'completed'
-                                        ORDER BY i2.score DESC, i2.completed_date DESC LIMIT 1
-                                    ), 0) / 25 * 100) * 0.25), 
+                                    ((COALESCE(i.score, 0) / 25 * 100) * 0.25), 
                                     2
                                 ) as final_score,
                                 RANK() OVER (
                                     ORDER BY (
                                         (COALESCE(esc.score, 0) * 0.75) + 
-                                        ((COALESCE((
-                                            SELECT i2.score FROM interviews i2
-                                            JOIN applications app2 ON i2.application_id = app2.application_id
-                                            WHERE app2.user_id = a.user_id AND app2.program_id = p.program_id AND i2.status = 'completed'
-                                            ORDER BY i2.score DESC, i2.completed_date DESC LIMIT 1
-                                        ), 0) / 25 * 100) * 0.25)
+                                        ((COALESCE(i.score, 0) / 25 * 100) * 0.25)
                                     ) DESC
-                                ) as overall_rank,
-                                pc.start_rank,
-                                pc.end_rank,
-                                'Qualified' as final_status
+                                ) as overall_rank
                             FROM applicants a
                             JOIN exam_registrations reg ON a.applicant_id = reg.applicant_id
                             JOIN programs p ON a.primary_program_id = p.program_id
                             LEFT JOIN exam_scores esc ON reg.registration_id = esc.registration_id
-                            LEFT JOIN program_cutoffs pc ON p.program_id = pc.program_id
+                            LEFT JOIN (
+                                SELECT 
+                                    app.user_id,
+                                    i.score,
+                                    i.result,
+                                    ROW_NUMBER() OVER (
+                                        PARTITION BY app.user_id 
+                                        ORDER BY i.score DESC, i.completed_date DESC
+                                    ) as rn
+                                FROM interviews i
+                                JOIN applications app ON i.application_id = app.application_id
+                                WHERE i.status = 'completed'
+                            ) i ON a.user_id = i.user_id AND i.rn = 1
                             WHERE p.program_id = ?
                             AND esc.score IS NOT NULL
                         ) ranked
-                        WHERE ranked.overall_rank >= ranked.start_rank AND ranked.overall_rank <= ranked.end_rank
+                        LEFT JOIN program_cutoffs pc ON pc.program_id = ?
                         ORDER BY ranked.final_score DESC, ranked.overall_rank ASC
                     ";
 
                     if ($stmt = mysqli_prepare($conn, $rankings_query)) {
-                        mysqli_stmt_bind_param($stmt, "i", $program_id);
+                        mysqli_stmt_bind_param($stmt, "ii", $program_id, $program_id);
                         mysqli_stmt_execute($stmt);
                         $rankings_result = mysqli_stmt_get_result($stmt);
                         $rankings = [];
@@ -887,6 +956,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                             $rankings[] = $ranking;
                         }
                         mysqli_stmt_close($stmt);
+                        
+                        // Debug: Log the query and results
+                        error_log("Final rankings query: " . $rankings_query);
+                        error_log("Number of final rankings found: " . count($rankings));
+                        if (count($rankings) > 0) {
+                            error_log("First final ranking: " . print_r($rankings[0], true));
+                        }
+                        
+                        // Debug: Check if there are any interviews for students in this program
+                        $interview_debug_query = "
+                            SELECT COUNT(*) as interview_count
+                            FROM interviews i
+                            JOIN applications app ON i.application_id = app.application_id
+                            JOIN applicants a ON app.user_id = a.user_id
+                            WHERE a.primary_program_id = ? AND i.status = 'completed'
+                        ";
+                        $interview_debug_stmt = mysqli_prepare($conn, $interview_debug_query);
+                        mysqli_stmt_bind_param($interview_debug_stmt, "i", $program_id);
+                        mysqli_stmt_execute($interview_debug_stmt);
+                        $interview_debug_result = mysqli_stmt_get_result($interview_debug_stmt);
+                        $interview_debug_data = mysqli_fetch_assoc($interview_debug_result);
+                        error_log("Interviews for program $program_id: " . $interview_debug_data['interview_count']);
+                        mysqli_stmt_close($interview_debug_stmt);
 
                         // Generate the report HTML
                         ?>
